@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { youtubeVideoId } from './youtube-target.js';
 
 export const eventSchema = z.object({
   id: z.string().min(1).max(256),
@@ -41,6 +42,9 @@ export const settingsSchema = z.object({
   overlaySeconds: z.number().int().min(5).max(300).default(25),
   blockedWords: z.array(z.string().min(1).max(80)).max(100).default([]),
   enabledTypes: z.array(eventSchema.shape.type).default(['message', 'gift', 'superchat', 'membership']),
-  youtubeBroadcastId: z.string().max(128).default('')
+  youtubeBroadcastId: z.string().max(128).default(''),
+  youtubeLiveUrl: z.string().trim().max(2048)
+    .refine(value => value === '' || youtubeVideoId(value) !== undefined, 'Enter a valid YouTube video ID or URL')
+    .default('')
 });
 export type Settings = z.infer<typeof settingsSchema>;

@@ -7,6 +7,26 @@ import { z } from 'zod';
 import type { Store } from '../storage/store.js';
 import type { ChatEngine } from '../services/engine.js';
 import type { PlatformState, ChatEvent } from '../types/protocol.js';
+import { youtubeVideoId } from '../types/youtube-target.js';
+
+export function manualLiveChat(video: youtube_v3.Schema$Video | undefined): {
+  chatId?: string;
+  title?: string;
+  detail: string;
+} {
+  if (!video) {
+    return { detail: 'Video not found or not accessible' };
+  }
+  const live = video.liveStreamingDetails;
+  const title = video.snippet?.title ?? undefined;
+  if (live?.actualEndTime) {
+    return { title, detail: 'Broadcast ended; live chat is closed' };
+  }
+  if (live?.activeLiveChatId) {
+    return { title, chatId: live.activeLiveChatId, detail: 'Reading selected YouTube LIVE chat (read-only)' };
+  }
+  return { title, detail: 'No active live chat; stream may be scheduled, offline, or chat disabled' };
+}
 
 const credentialsSchema = z.object({
   access_token: z.string().nullish(),
@@ -56,6 +76,7 @@ export class YouTubeConnector {
   broadcasts: { id: string; title: string; active: boolean }[] = [];
   private auth;
   private api;
+  private readApi;
   private callback?: Server;
   private callbackTimer?: NodeJS.Timeout;
   private timer?: NodeJS.Timeout;
@@ -70,6 +91,7 @@ export class YouTubeConnector {
   constructor(private store: Store, private engine: ChatEngine, private changed: () => void) {
     this.auth = new google.auth.OAuth2(process.env.YOUTUBE_CLIENT_ID, process.env.YOUTUBE_CLIENT_SECRET);
     this.api = google.youtube({ version: 'v3', auth: this.auth });
+    this.readApi = this.api;
     this.auth.on('tokens', tokens => {
       const merged = { ...this.auth.credentials, ...tokens };
       this.saveQueue = this.saveQueue.then(() => this.store.saveCredentials(merged)).catch(() => {
@@ -87,8 +109,8 @@ export class YouTubeConnector {
     const stored = await this.store.credentials();
     if (stored) {
       this.auth.setCredentials(credentialsSchema.parse(stored));
-      await this.discover();
     }
+    await this.discover();
   }
 
   async login(): Promise<string> {
@@ -150,7 +172,19 @@ export class YouTubeConnector {
   }
 
   async discover(): Promise<void> {
-    if (this.discovery || !this.auth.credentials.access_token && !this.auth.credentials.refresh_token) {
+    if (this.discovery) {
+      // Cancel any older selection before retrying the newly saved target.
+      this.stopPolling();
+      this.timer = setTimeout(() => void this.discover(), 250);
+      return;
+    }
+    const target = this.engine.settings.youtubeLiveUrl;
+    const authenticated = Boolean(this.auth.credentials.access_token || this.auth.credentials.refresh_token);
+    const key = process.env.YOUTUBE_API_KEY?.trim();
+    if (!authenticated && !(target && key)) {
+      this.stopPolling();
+      this.update({ status: 'disconnected', canReply: false,
+        detail: target ? 'Configure YouTube API Key in Settings, then restart OBS' : 'Login required or enter a LIVE ID and API key' });
       return;
     }
     this.discovery = true;
@@ -158,6 +192,29 @@ export class YouTubeConnector {
     const generation = this.generation;
     this.update({ status: 'connecting', detail: 'Discovering broadcasts', canReply: false });
     try {
+      if (target) {
+        this.readApi = key ? google.youtube({ version: 'v3', auth: key }) : this.api;
+        const result = await this.readApi.videos.list({
+          id: [youtubeVideoId(target)!],
+          part: ['snippet', 'liveStreamingDetails']
+        });
+        if (generation !== this.generation) {
+          return;
+        }
+        const selected = manualLiveChat(result.data.items?.[0]);
+        this.chatId = selected.chatId;
+        this.broadcasts = [];
+        this.failures = 0;
+        this.update({ status: this.chatId ? 'connected' : 'offline',
+          title: selected.title, detail: selected.detail, canReply: false });
+        if (this.chatId) {
+          void this.poll(generation);
+        } else if (this.engine.settings.autoDetect) {
+          this.timer = setTimeout(() => void this.discover(), 60000);
+        }
+        return;
+      }
+      this.readApi = this.api;
       const channel = await this.api.channels.list({ part: ['snippet'], mine: true });
       const account = channel.data.items?.[0]?.snippet?.title ?? 'YouTube';
       const active = await this.api.liveBroadcasts.list({ part: ['snippet', 'status'], broadcastStatus: 'active', maxResults: 50 });
@@ -202,7 +259,7 @@ export class YouTubeConnector {
       return;
     }
     try {
-      const result = await this.api.liveChatMessages.list({
+      const result = await this.readApi.liveChatMessages.list({
         liveChatId: this.chatId,
         part: ['snippet', 'authorDetails'],
         pageToken: this.pageToken,
@@ -227,7 +284,10 @@ export class YouTubeConnector {
         }
         return;
       }
-      this.update({ ...this.state, status: 'connected', detail: 'Receiving live chat', canReply: true });
+      const readOnly = Boolean(this.engine.settings.youtubeLiveUrl);
+      this.update({ ...this.state, status: 'connected',
+        detail: readOnly ? 'Reading selected YouTube LIVE chat (read-only)' : 'Receiving live chat',
+        canReply: !readOnly });
       this.timer = setTimeout(() => void this.poll(generation), Math.max(1000, result.data.pollingIntervalMillis ?? 5000));
     } catch (error) {
       if (generation === this.generation) {
@@ -250,7 +310,7 @@ export class YouTubeConnector {
   }
 
   async send(message: string): Promise<void> {
-    if (!this.chatId || !this.state.canReply) {
+    if (this.engine.settings.youtubeLiveUrl || !this.chatId || !this.state.canReply) {
       throw new Error('No authorized active YouTube chat');
     }
     if (Date.now() - this.lastSend < 2000) {

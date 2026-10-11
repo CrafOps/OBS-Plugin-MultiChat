@@ -7,6 +7,7 @@
 | Chat engine | Normalized protocol, ordering, dedupe, filters, burst suppression, bounded buffers | Automated tests |
 | YouTube OAuth | System browser, random loopback callback, state, PKCE, DPAPI, token refresh | DPAPI tested; real Google consent/refresh untested |
 | YouTube LIVE | Channel, active/latest discovery, manual selection, interval-aware polling, paid/member normalization, reply | Source compiled; real live/API/quota tests outstanding |
+| YouTube LIVE ID / URL | API-key read-only selection via videos.list, no OAuth required, ended-chat guard and replies disabled | Parser/status/reply guard tests; real API-key LIVE test and new DLL build outstanding |
 | TikTok | Optional username connector, chat/gift/like/follow/join, final gift totals, backoff, account switching | Adapter compiled; no actual LIVE session tested |
 | TikTok login / reply | Unavailable | Login Kit does not establish requested LIVE permissions; no undocumented sending used |
 | Native UI | Accounts/status, plain timeline, badges/timestamps, paid highlights, platform/search filters, autoscroll, clear, reply state, settings | Source only; no screenshot or interaction validation |

@@ -24,7 +24,7 @@ test('local bridge authenticates controls, restricts overlay and shuts down', { 
   const origin = `http://127.0.0.1:${port}`;
   const child = spawn(process.execPath, ['dist/main.js'], {
     env: { ...process.env, BRIDGE_TOKEN: token, BRIDGE_PORT: String(port), BRIDGE_DATA: directory,
-      YOUTUBE_CLIENT_ID: '', YOUTUBE_CLIENT_SECRET: '' },
+      YOUTUBE_CLIENT_ID: '', YOUTUBE_CLIENT_SECRET: '', YOUTUBE_API_KEY: '' },
     windowsHide: true,
     stdio: ['pipe', 'pipe', 'pipe']
   });

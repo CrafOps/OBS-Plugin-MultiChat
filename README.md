@@ -2,7 +2,7 @@
 
 A native Windows x64 OBS dock written in C++20 and Qt Widgets, backed by a local TypeScript process. The dock uses the OBS Frontend API; the transparent overlay is the only Browser Source component. No hosted application backend is required.
 
-**Development build, not a verified production release.** The bridge compiles locally and all six automated tests pass. The detected Steam installation is OBS 32.2.2 with Qt 6.11.1. The DLL has not been compiled or loaded because this workspace has no detected OBS SDK, Qt SDK, CMake, or C++ compiler. Real YouTube/TikTok stream tests require accounts and live streams. See [feature status](docs/STATUS.md) for specific omissions and [validation record](docs/VALIDATION.md) for actual results.
+**Development build, not a verified production release.** The bridge compiles locally and all ten automated tests pass. The detected Steam installation is OBS 32.2.2 with Qt 6.11.1. The updated DLL has not been compiled locally because this workspace has no detected OBS SDK, Qt SDK, CMake, or C++ compiler. Real YouTube/TikTok stream tests require accounts and live streams. See [feature status](docs/STATUS.md) for specific omissions and [validation record](docs/VALIDATION.md) for actual results.
 
 ## Layout
 
@@ -44,6 +44,12 @@ npm.cmd test
 For a manual development launch, supply `BRIDGE_TOKEN`, an unpredictable token of at least 32 characters; see `bridge/.env.example`. The native plugin generates a fresh token automatically. Environment example files are not loaded automatically.
 
 ## Connect
+
+For read-only YouTube without OAuth login, put a **YouTube Data API key** in
+Settings, save and restart OBS. Enter a LIVE video ID or URL in Accounts and
+save accounts. This mode selects only that video and disables sending. It still
+requires a Google Cloud project with YouTube Data API v3 enabled; see
+[account setup](docs/ACCOUNTS.md). Rebuild the DLL to obtain the newly added field.
 
 1. Install the DLL and plugin data after building. Open OBS → Docks → Unified Live Chat.
 2. In Settings, set the package folder containing `bridge/` and `overlay/`, and the Node executable. Save and start the bridge.

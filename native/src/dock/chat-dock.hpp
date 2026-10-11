@@ -38,6 +38,8 @@ private:
     QLineEdit *nodePath;
     QLineEdit *clientId;
     QLineEdit *clientSecret;
+    QLineEdit *apiKey;
+    QLineEdit *youtubeLiveUrl;
     QLineEdit *overlayUrl;
     QComboBox *platform;
     QComboBox *broadcasts;

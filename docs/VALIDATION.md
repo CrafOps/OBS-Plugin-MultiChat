@@ -1,5 +1,15 @@
 # Local validation record
 
+## YouTube read-only LIVE ID addition
+
+The updated bridge builds and all ten tests pass. Four additional tests cover
+YouTube ID/URL parsing, malformed/foreign URL rejection, completed/scheduled video
+handling, and blocking replies even when a selected chat and apparent reply
+permission exist. Manual selection uses API-key authentication without OAuth.
+No real Google API-key request or LIVE chat has been tested. The user supplied a
+successful first GitHub build screenshot, but a new native build is required for
+the read-only fields added afterward.
+
 Validated in the supplied Windows workspace on 2026-10-12 (Asia/Bangkok).
 
 - Node.js: v22.23.3; npm: 10.9.9.

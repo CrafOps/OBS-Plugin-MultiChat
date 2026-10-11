@@ -46,6 +46,13 @@ ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
     accountLayout->addWidget(logout);
     broadcasts = new QComboBox;
     accountLayout->addWidget(broadcasts);
+    youtubeLiveUrl = new QLineEdit;
+    youtubeLiveUrl->setMaxLength(2048);
+    youtubeLiveUrl->setPlaceholderText("YouTube LIVE ID or URL (read-only)");
+    accountLayout->addWidget(youtubeLiveUrl);
+    auto *readOnlyHint = new QLabel("Enter a LIVE ID/URL to read chat without login using an API key. Clear to use account broadcasts.");
+    readOnlyHint->setWordWrap(true);
+    accountLayout->addWidget(readOnlyHint);
     tiktokLabel = new QLabel("TikTok: unofficial username connection");
     tiktokLabel->setWordWrap(true);
     accountLayout->addWidget(tiktokLabel);
@@ -105,10 +112,13 @@ ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
     clientId = new QLineEdit(local.value("youtubeClientId").toString());
     clientSecret = new QLineEdit(local.value("youtubeClientSecret").toString());
     clientSecret->setEchoMode(QLineEdit::Password);
+    apiKey = new QLineEdit(local.value("youtubeApiKey").toString());
+    apiKey->setEchoMode(QLineEdit::Password);
     form->addRow("Package folder", rootPath);
     form->addRow("Node executable", nodePath);
     form->addRow("Google desktop client ID", clientId);
     form->addRow("Desktop client secret", clientSecret);
+    form->addRow("YouTube API Key (read-only LIVE)", apiKey);
     startWithObs = new QCheckBox("Start bridge with OBS");
     startWithObs->setChecked(local.value("startWithObs", true).toBool());
     autoReconnect = new QCheckBox("Reconnect platform sessions");
@@ -195,6 +205,7 @@ void ChatDock::saveSettings()
     local.setValue("nodePath", nodePath->text().trimmed());
     local.setValue("youtubeClientId", clientId->text().trimmed());
     local.setValue("youtubeClientSecret", clientSecret->text().trimmed());
+    local.setValue("youtubeApiKey", apiKey->text().trimmed());
     local.setValue("startWithObs", startWithObs->isChecked());
     settings.insert("tiktokUsername", username->text().trimmed());
     settings.insert("tiktokEnabled", tiktokEnabled->isChecked());
@@ -205,6 +216,7 @@ void ChatDock::saveSettings()
     settings.insert("overlayLimit", overlayLimit->value());
     settings.insert("overlaySeconds", overlaySeconds->value());
     settings.insert("youtubeBroadcastId", broadcasts->currentData().toString());
+    settings.insert("youtubeLiveUrl", youtubeLiveUrl->text().trimmed());
     bridge.command("settings", {{"settings", settings}});
 }
 
@@ -226,6 +238,7 @@ void ChatDock::receive(const QJsonObject &message)
     const auto kind = message.value("kind").toString();
     if (kind == "snapshot" || kind == "settings") {
         settings = message.value("settings").toObject();
+        youtubeLiveUrl->setText(settings.value("youtubeLiveUrl").toString());
         username->setText(settings.value("tiktokUsername").toString());
         tiktokEnabled->setChecked(settings.value("tiktokEnabled").toBool());
         autoDetect->setChecked(settings.value("autoDetect").toBool());
@@ -255,6 +268,7 @@ void ChatDock::receive(const QJsonObject &message)
         tiktokLabel->setText(QString("TikTok · %1\n%2")
             .arg(tiktok.value("account").toString(), tiktok.value("detail").toString()));
         canReply = youtube.value("canReply").toBool();
+        reply->setEnabled(canReply);
         sendButton->setEnabled(bridgeConnected && canReply && pendingReply.isEmpty());
         const auto selected = settings.value("youtubeBroadcastId").toString();
         QSignalBlocker blocker(broadcasts);

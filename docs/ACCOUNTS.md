@@ -2,6 +2,20 @@
 
 ## YouTube
 
+### Read-only by LIVE ID or URL (no OAuth login)
+
+1. Open [Google Cloud Console](https://console.cloud.google.com/), create/select a project, and enable **YouTube Data API v3**.
+2. Under **APIs & Services → Credentials → Create credentials → API key**, create a key. Restrict its allowed APIs to **YouTube Data API v3**. You do not need a Desktop OAuth client for this mode.
+3. In the native Dock Settings, enter **YouTube API Key (read-only LIVE)** and save. Close/reopen OBS to apply the key to the bridge's environment.
+4. In Accounts, enter `FiaU2oMI-Cg` or `https://www.youtube.com/watch?v=FiaU2oMI-Cg` in **YouTube LIVE ID or URL (read-only)** and click **Save accounts and connect**. Plain IDs, watch URLs, `youtu.be` URLs and `/live/` URLs are supported.
+5. The selected video must be currently LIVE with active chat and accessible to the key. The connector uses `videos.list` to retrieve `liveStreamingDetails.activeLiveChatId`, then reads live chat. Scheduled, completed, inaccessible and chat-disabled videos remain offline. It does not silently select a different broadcast.
+
+This mode always disables replies, even if OAuth credentials were previously saved. API keys still use project quota. To return to OAuth broadcast discovery, clear the LIVE ID/URL field and save. The key stays in local native settings and is never sent to the overlay. See [YouTube video fields](https://developers.google.com/youtube/v3/docs/videos#liveStreamingDetails.activeLiveChatId).
+
+The read-only field is a source change added after the first GitHub artifact. Upload the updated files and rerun the Release workflow to get a DLL with this field.
+
+### OAuth account discovery and replies
+
 1. Create/select a Google Cloud project and enable YouTube Data API v3.
 2. Configure the OAuth consent screen. While your app is in testing, add your channel's Google account as a test user. Google testing grants may expire, requiring authorization again; a distributed release may require Google's verification process.
 3. Create an OAuth client with application type **Desktop app**. Copy its client ID and client secret into the dock Settings. These identify a public desktop client; do not use a web-server client or embed credentials in source code.

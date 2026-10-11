@@ -130,6 +130,7 @@ void BridgeClient::start()
     environment.insert("BRIDGE_PARENT_PID", QString::number(QCoreApplication::applicationPid()));
     environment.insert("YOUTUBE_CLIENT_ID", settings.value("youtubeClientId").toString());
     environment.insert("YOUTUBE_CLIENT_SECRET", settings.value("youtubeClientSecret").toString());
+    environment.insert("YOUTUBE_API_KEY", settings.value("youtubeApiKey").toString());
     process.setProcessEnvironment(environment);
     process.setWorkingDirectory(root);
     process.setProgram(node);
