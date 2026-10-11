@@ -1,0 +1,104 @@
+name: Build Windows plugin
+
+on:
+  workflow_dispatch:
+    inputs:
+      configuration:
+        description: Build configuration (Release for normal OBS use)
+        type: choice
+        options:
+          - Release
+          - Debug
+        default: Release
+      include_tiktok:
+        description: Include the optional unofficial TikTok connector
+        type: boolean
+        default: true
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: OBS 32.2.2 / Qt 6.11.1 / Windows x64
+    runs-on: windows-2025
+    timeout-minutes: 90
+    env:
+      BUILD_CONFIGURATION: ${{ inputs.configuration || 'Release' }}
+      INCLUDE_TIKTOK: ${{ github.event_name != 'workflow_dispatch' || inputs.include_tiktok }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check out plugin
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check out matching official OBS source
+        uses: actions/checkout@v4
+        with:
+          repository: obsproject/obs-studio
+          ref: '32.2.2'
+          path: .ci/obs-studio
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: bridge/package-lock.json
+
+      - name: Build and test bridge
+        working-directory: bridge
+        run: |
+          npm.cmd ci --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) {
+              throw 'Dependency installation failed'
+          }
+          npm.cmd run build
+          if ($LASTEXITCODE -ne 0) {
+              throw 'Bridge build failed'
+          }
+          npm.cmd test
+          if ($LASTEXITCODE -ne 0) {
+              throw 'Bridge tests failed'
+          }
+
+      - name: Build OBS SDK and native plugin, then package
+        run: |
+          ./scripts/build-ci.ps1 `
+              -Configuration $env:BUILD_CONFIGURATION `
+              -WithoutTikTok:($env:INCLUDE_TIKTOK -ne 'true')
+
+      - name: Upload installable package
+        uses: actions/upload-artifact@v4
+        with:
+          name: obs-unified-chat-obs32.2.2-qt6.11.1-windows-x64-${{ env.BUILD_CONFIGURATION }}
+          path: package/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build-diagnostics
+          path: |
+            .ci/obs-studio/build_x64/CMakeFiles/CMakeConfigureLog.yaml
+            build/native/CMakeFiles/CMakeConfigureLog.yaml
+            build/qtwebsockets/CMakeFiles/CMakeConfigureLog.yaml
+          if-no-files-found: ignore
+          retention-days: 7

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+build/
+package/
+*.user
+.env
+*.log
+.test-data-*/
+.ci/
