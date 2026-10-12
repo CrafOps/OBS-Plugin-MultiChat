@@ -119,3 +119,4 @@ foreach ($scenario in @('success', 'checksum', 'incompatible', 'traversal', 'loc
     Write-Host "Updater check passed: $scenario"
 }
 Write-Host 'Automatic updater checks passed (fixture files only; no real OBS installation modified).'
+exit 0
