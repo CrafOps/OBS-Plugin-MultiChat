@@ -52,13 +52,16 @@ export class PublicYouTubeConnector {
   private failures = 0;
   private metadataTimer?: NodeJS.Timeout;
   private metadata: ReturnType<typeof watchMetadata> = {};
-  private names = new ChannelNames();
+  private names: ChannelNames;
   private metadataActive = false;
 
   constructor(private engine: ChatEngine, private changed: (state: PlatformState) => void,
     private factory = (videoId: string): PublicChatClient =>
       new LiveChat({ liveId: videoId }, 2000, 'live') as unknown as PublicChatClient,
-    private loadMetadata = publicPage) {}
+    private loadMetadata = publicPage,
+    channelNames = new ChannelNames()) {
+    this.names = channelNames;
+  }
 
   private report(state: PlatformState): void {
     this.changed({ ...state, ...(state.status === 'connected' ? this.metadata : {}) });
@@ -91,10 +94,7 @@ export class PublicYouTubeConnector {
     if (generation !== this.generation) {
       return;
     }
-    const event = normalizePublicYouTube(item);
-    event.user.displayName = name.displayName ?? event.user.displayName;
-    event.user.username = name.handle ?? event.user.username;
-    this.engine.accept(event);
+    this.engine.updateYouTubeName(item.author.channelId, name);
   }
 
   async connect(videoId: string): Promise<void> {
@@ -110,10 +110,13 @@ export class PublicYouTubeConnector {
         return;
       }
       try {
+        const event = normalizePublicYouTube(item);
+        const cached = this.names.cached(item.author.channelId);
+        event.user.displayName = cached.displayName ?? event.user.displayName;
+        event.user.username = cached.handle ?? event.user.username;
+        this.engine.accept(event);
         if (/^UC[\w-]{22}$/.test(item.author.channelId)) {
           void this.acceptNamed(item, generation).catch(() => undefined);
-        } else {
-          this.engine.accept(normalizePublicYouTube(item));
         }
         this.failures = 0;
         this.report({ status: 'connected', detail: 'Receiving public YouTube chat (read-only, no API key)',

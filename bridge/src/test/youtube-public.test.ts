@@ -5,6 +5,7 @@ import { PublicYouTubeConnector, normalizePublicYouTube } from '../platforms/you
 import { ChatEngine } from '../services/engine.js';
 import { settingsSchema, type PlatformState } from '../types/protocol.js';
 import type { ChatItem } from 'youtube-chat-next';
+import { ChannelNames } from '../platforms/youtube-metadata.js';
 
 const item: ChatItem = {
   id: 'public-message', author: { name: 'ผู้ชม', channelId: 'channel' },
@@ -23,6 +24,45 @@ test('normalizes public text, emoji, badges and paid display without guessing cu
   assert.equal(paid.type, 'superchat');
   assert.match(paid.message!, /฿100.00/);
   assert.equal(paid.monetaryEvent, undefined);
+});
+
+test('shows chat immediately and patches existing handle-only messages after name lookup', async () => {
+  class FakeClient extends EventEmitter {
+    async start(): Promise<boolean> {
+      return true;
+    }
+    stop(): void {
+    }
+  }
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  const names = new ChannelNames(async () => {
+    await gate;
+    return 'var ytInitialData = {"metadata":{"channelMetadataRenderer":{"title":"PPekKunGz Channel","vanityChannelUrl":"http://www.youtube.com/@ppekkungzchannel"}}};';
+  });
+  const engine = new ChatEngine(settingsSchema.parse({ autoReconnect: false }));
+  const client = new FakeClient();
+  const connector = new PublicYouTubeConnector(engine, () => undefined, () => client, async () => '', names);
+  await connector.connect('vf8alkN0zXw');
+  const author = { name: '@ppekkungzchannel', channelId: 'UCvrYlgqNVrv-zEYXIElfZ2g' };
+  let updates = 0;
+  engine.on('profile', () => {
+    updates += 1;
+  });
+  client.emit('chat', { ...item, author });
+  assert.equal(engine.history.length, 1);
+  assert.equal(engine.history[0]!.user.displayName, '@ppekkungzchannel');
+  release();
+  await names.get(author.channelId);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(engine.history[0]!.user.displayName, 'PPekKunGz Channel');
+  assert.equal(engine.history[0]!.user.username, '@ppekkungzchannel');
+  assert.equal(updates, 1);
+  client.emit('chat', { ...item, author, id: 'cached-author', message: [{ text: 'Second message' }] });
+  assert.equal(engine.history[1]!.user.displayName, 'PPekKunGz Channel');
+  connector.stop();
 });
 
 test('public reader receives events and suppresses stale events after switching and stopping', async () => {

@@ -61,6 +61,7 @@ const changed = () => publish({ kind: 'state', youtube: youtube.state, tiktok: t
 const youtube = new YouTubeConnector(store, engine, changed);
 const tiktok = new TikTokConnector(engine, changed);
 engine.on('event', event => publish({ kind: 'event', event }));
+engine.on('profile', profile => publish({ kind: 'profile', ...profile }));
 engine.on('clear', () => publish({ kind: 'clear' }));
 
 app.addHook('onRequest', async (request, reply) => {

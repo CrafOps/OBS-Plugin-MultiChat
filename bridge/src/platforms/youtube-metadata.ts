@@ -83,8 +83,13 @@ export function watchMetadata(html: string): { viewers?: number; title?: string;
 }
 
 export function channelMetadata(html: string): { displayName?: string; handle?: string } {
-  const metadata = findRenderer(pageJson(html, 'ytInitialData'), 'channelMetadataRenderer');
-  const vanity = typeof metadata?.vanityChannelUrl === 'string' ? metadata.vanityChannelUrl : '';
+  const initial = pageJson(html, 'ytInitialData') as {
+    metadata?: { channelMetadataRenderer?: RecordValue };
+  } | undefined;
+  const metadata = initial?.metadata?.channelMetadataRenderer ?? findRenderer(initial, 'channelMetadataRenderer');
+  const ownerUrls = metadata?.ownerUrls as unknown[] | undefined;
+  const vanity = typeof metadata?.vanityChannelUrl === 'string' ? metadata.vanityChannelUrl
+    : ownerUrls?.find((value): value is string => typeof value === 'string' && value.includes('/@')) ?? '';
   // YouTube returns http canonical metadata even though we fetch exclusively via HTTPS.
   const handle = vanity.match(/^https?:\/\/(?:www\.)?youtube\.com\/(@[^/?#]+)(?:[/?#]|$)/)?.[1];
   return {
@@ -94,11 +99,29 @@ export function channelMetadata(html: string): { displayName?: string; handle?: 
 }
 
 export async function publicPage(path: string): Promise<string> {
-  const response = await fetch(`https://www.youtube.com/${path}`, {
-    headers: { 'Accept-Language': 'en-US', 'User-Agent': 'Mozilla/5.0' },
-    signal: AbortSignal.timeout(5000), redirect: 'error'
-  });
-  if (!response.ok || !response.body) {
+  const signal = AbortSignal.timeout(5000);
+  let url = new URL(path, 'https://www.youtube.com/');
+  let response: Response | undefined;
+  for (let redirects = 0; redirects <= 3; redirects += 1) {
+    if (url.protocol !== 'https:' || !['www.youtube.com', 'youtube.com'].includes(url.hostname)
+        || url.username || url.password || url.port) {
+      throw new Error('Unexpected metadata redirect');
+    }
+    response = await fetch(url, {
+      headers: { 'Accept-Language': 'en-US', 'User-Agent': 'Mozilla/5.0' },
+      signal, redirect: 'manual'
+    });
+    if (response.status < 300 || response.status >= 400) {
+      break;
+    }
+    const location = response.headers.get('location');
+    await response.body?.cancel();
+    if (!location) {
+      throw new Error('Metadata redirect unavailable');
+    }
+    url = new URL(location, url);
+  }
+  if (!response?.ok || !response.body) {
     throw new Error('Public metadata unavailable');
   }
   const reader = response.body.getReader();
@@ -125,6 +148,26 @@ export async function publicPage(path: string): Promise<string> {
 export class ChannelNames {
   private cache = new Map<string, { value: { displayName?: string; handle?: string }; expires: number }>();
   private pending = new Map<string, Promise<{ displayName?: string; handle?: string }>>();
+  private queue: (() => Promise<void>)[] = [];
+  private active = 0;
+
+  constructor(private loadPage = publicPage) {}
+
+  cached(id: string): { displayName?: string; handle?: string } {
+    const cached = this.cache.get(id);
+    return cached && cached.expires > Date.now() ? cached.value : {};
+  }
+
+  private drain(): void {
+    while (this.active < 2 && this.queue.length) {
+      const task = this.queue.shift()!;
+      this.active += 1;
+      void task().finally(() => {
+        this.active -= 1;
+        this.drain();
+      });
+    }
+  }
 
   async get(id: string): Promise<{ displayName?: string; handle?: string }> {
     if (!/^UC[\w-]{22}$/.test(id)) {
@@ -138,18 +181,25 @@ export class ChannelNames {
     if (pending) {
       return pending;
     }
-    if (this.pending.size >= 2) {
+    if (this.pending.size >= 128) {
       return {};
     }
-    const request = publicPage(`channel/${id}?hl=en`).then(channelMetadata).catch(() => ({})).then(value => {
+    let resolve!: (value: { displayName?: string; handle?: string }) => void;
+    const request = new Promise<{ displayName?: string; handle?: string }>(done => {
+      resolve = done;
+    });
+    this.pending.set(id, request);
+    this.queue.push(async () => {
+      const value = await this.loadPage(`channel/${id}?hl=en`).then(channelMetadata).catch(() => ({}));
       this.pending.delete(id);
       if (this.cache.size >= 500) {
         this.cache.delete(this.cache.keys().next().value!);
       }
-      this.cache.set(id, { value, expires: Date.now() + ('displayName' in value ? 3600000 : 60000) });
-      return value;
+      const successful = 'displayName' in value && value.displayName && !value.displayName.startsWith('@');
+      this.cache.set(id, { value, expires: Date.now() + (successful ? 3600000 : 60000) });
+      resolve(value);
     });
-    this.pending.set(id, request);
+    this.drain();
     return request;
   }
 }

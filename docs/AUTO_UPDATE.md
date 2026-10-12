@@ -2,7 +2,7 @@
 
 The dock shows current viewers for each platform. YouTube public page metadata refreshes every 30 seconds; TikTok uses live room statistics (`total`, not cumulative `totalUser`). A dash means unavailable or disconnected, not zero. Counts may differ briefly from the platform's own interface.
 
-YouTube chat names use public channel metadata to show `Display name (@handle)` in the native dock and overlay. Lookups are cached, limited to two concurrent requests and have a five-second timeout. If YouTube restricts metadata or the queue is full, chat still appears with the name supplied by the chat reader. No API key or login is required.
+YouTube chat names use public channel metadata to show `Display name (@handle)` in the native dock and overlay. Chat appears immediately; completed lookups update existing messages in both views. Lookups are cached, queued for up to 128 distinct authors, limited to two concurrent requests and have a five-second timeout. YouTube redirects are followed only within HTTPS YouTube hosts. Unavailable names retry on a later message after a short cache period. If YouTube restricts metadata or the queue is full, chat still appears with the name supplied by the chat reader. This applies to public read-only and optional API/OAuth modes. No API key or login is required in public mode.
 
 ## Install this version once
 

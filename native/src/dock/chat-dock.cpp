@@ -563,6 +563,27 @@ void ChatDock::receive(const QJsonObject &message)
         }
     } else if (kind == "event") {
         addEvent(message.value("event").toObject());
+    } else if (kind == "profile") {
+        const auto profile = message.value("user").toObject();
+        for (int row = 0; row < timeline->count(); ++row) {
+            auto *item = timeline->item(row);
+            auto event = item->data(Qt::UserRole + 2).toJsonObject();
+            auto user = event.value("user").toObject();
+            if (event.value("platform") != message.value("platform")
+                || user.value("id") != message.value("id")) {
+                continue;
+            }
+            const auto previous = user.value("displayName").toString() + " " + user.value("username").toString();
+            for (auto field = profile.begin(); field != profile.end(); ++field) {
+                user.insert(field.key(), field.value());
+            }
+            event.insert("user", user);
+            item->setData(Qt::UserRole + 2, event);
+            item->setText(item->text().replace(previous,
+                user.value("displayName").toString() + " " + user.value("username").toString()));
+        }
+        timeline->doItemsLayout();
+        filter();
     } else if (kind == "clear") {
         timeline->clear();
         filter();

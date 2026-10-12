@@ -80,6 +80,10 @@ function display(event) {
     element.append(money);
   }
   element.dataset.timestamp = String(event.timestamp);
+  element.dataset.platform = platform;
+  element.dataset.userId = event.user.id;
+  element.dataset.displayName = event.user.displayName;
+  element.dataset.username = event.user.username;
   const later = [...container.children].find(child => Number(child.dataset.timestamp) > event.timestamp);
   container.insertBefore(element, later ?? null);
   while (container.children.length > settings.overlayLimit) {
@@ -110,6 +114,23 @@ function connect() {
         message.events.forEach(display);
       } else if (message.kind === 'event') {
         display(message.event);
+      } else if (message.kind === 'profile') {
+        for (const element of container.children) {
+          if (element.dataset.platform !== message.platform || element.dataset.userId !== message.id) {
+            continue;
+          }
+          element.dataset.displayName = message.user.displayName ?? element.dataset.displayName;
+          element.dataset.username = message.user.username ?? element.dataset.username;
+          const author = element.querySelector('.author');
+          const avatar = author.querySelector('img.avatar');
+          const name = element.dataset.displayName;
+          const username = element.dataset.username;
+          const handle = username && username !== name ? ` (${username.startsWith('@') ? '' : '@'}${username})` : '';
+          author.textContent = `YouTube · ${name}${handle}`;
+          if (avatar) {
+            author.prepend(avatar);
+          }
+        }
       } else if (message.kind === 'settings') {
         settings = message.settings;
       } else if (message.kind === 'clear') {

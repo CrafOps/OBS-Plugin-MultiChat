@@ -9,7 +9,7 @@ import type { ChatEngine } from '../services/engine.js';
 import type { PlatformState, ChatEvent } from '../types/protocol.js';
 import { youtubeVideoId } from '../types/youtube-target.js';
 import { PublicYouTubeConnector } from './youtube-public.js';
-import { viewerCount } from './youtube-metadata.js';
+import { ChannelNames, viewerCount } from './youtube-metadata.js';
 
 export function manualLiveChat(video: youtube_v3.Schema$Video | undefined): {
   chatId?: string;
@@ -90,6 +90,7 @@ export class YouTubeConnector {
   private failures = 0;
   private discovery = false;
   private lastSend = 0;
+  private names = new ChannelNames();
 
   constructor(private store: Store, private engine: ChatEngine, private changed: () => void) {
     this.auth = new google.auth.OAuth2(process.env.YOUTUBE_CLIENT_ID, process.env.YOUTUBE_CLIENT_SECRET);
@@ -288,7 +289,15 @@ export class YouTubeConnector {
       for (const item of result.data.items ?? []) {
         const event = normalizeYouTube(item);
         if (event) {
+          const cached = this.names.cached(event.user.id);
+          event.user.displayName = cached.displayName ?? event.user.displayName;
+          event.user.username = cached.handle ?? event.user.username;
           this.engine.accept(event);
+          void this.names.get(event.user.id).then(profile => {
+            if (generation === this.generation) {
+              this.engine.updateYouTubeName(event.user.id, profile);
+            }
+          }).catch(() => undefined);
         }
       }
       this.pageToken = result.data.nextPageToken ?? undefined;

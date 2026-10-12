@@ -63,6 +63,32 @@ export class ChatEngine extends EventEmitter {
     this.history.splice(0, Math.max(0, this.history.length - this.settings.messageLimit));
   }
 
+  updateYouTubeName(id: string, profile: { displayName?: string; handle?: string }): void {
+    if (!profile.displayName && !profile.handle) {
+      return;
+    }
+    const user: { displayName?: string; username?: string } = {};
+    if (profile.displayName && !profile.displayName.startsWith('@') && profile.displayName.length <= 256) {
+      user.displayName = profile.displayName;
+    }
+    if (profile.handle?.startsWith('@') && profile.handle.length <= 256) {
+      user.username = profile.handle;
+    }
+    let changed = false;
+    for (const event of this.history) {
+      if (event.platform === 'youtube' && event.user.id === id) {
+        if (user.displayName && event.user.displayName !== user.displayName
+            || user.username && event.user.username !== user.username) {
+          Object.assign(event.user, user);
+          changed = true;
+        }
+      }
+    }
+    if (changed) {
+      this.emit('profile', { platform: 'youtube', id, user });
+    }
+  }
+
   clear(): void {
     this.history.length = 0;
     this.emit('clear');
