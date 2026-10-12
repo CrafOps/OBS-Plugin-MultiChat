@@ -7,12 +7,22 @@
 #include <QBuffer>
 #include <QMovie>
 #include <QUrl>
+#include <QSslSocket>
 #include <iostream>
 #include "../src/dock/chat-delegate.hpp"
 
 int main(int argc, char **argv)
 {
     QApplication application(argc, argv);
+    if (!QSslSocket::supportsSsl()) {
+        std::cerr << "HTTPS media transport is unavailable\n";
+        return 1;
+    }
+    const auto formats = QImageReader::supportedImageFormats();
+    if (!formats.contains("jpeg") || !formats.contains("webp")) {
+        std::cerr << "JPEG/WebP media decoder is unavailable\n";
+        return 1;
+    }
     if (!MediaCache::allowed(QUrl("https://yt3.ggpht.com/photo.jpg"))
         || MediaCache::allowed(QUrl("https://127.0.0.1/private"))
         || MediaCache::allowed(QUrl("https://tiktokcdn.com.evil.invalid/image.gif"))
