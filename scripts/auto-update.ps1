@@ -20,6 +20,23 @@ function Set-UpdateStatus([string]$Message) {
     [IO.File]::WriteAllText($statusPath, $Message, [Text.Encoding]::UTF8)
 }
 
+function Register-AppIcon {
+    $icon = Join-Path $packagePath 'appicon.ico'
+    $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{F58E5F24-EEDE-44B8-A2AB-EDB867CB384E}_is1'
+    if (-not (Test-Path -LiteralPath $icon) -or -not (Test-Path -LiteralPath $key)) {
+        return
+    }
+    try {
+        $entry = Get-ItemProperty -LiteralPath $key
+        $registered = [IO.Path]::GetFullPath($entry.InstallLocation).TrimEnd('\', '/')
+        if ($registered -eq $packagePath) {
+            Set-ItemProperty -LiteralPath $key -Name DisplayIcon -Value $icon
+        }
+    } catch {
+        # Cosmetic registration must not prevent ordinary plugin updates.
+    }
+}
+
 function Assert-AssetUrl([string]$Url) {
     $prefix = "https://github.com/$repository/releases/download/"
     if (-not $Url.StartsWith($prefix, [StringComparison]::Ordinal) -or $Url.Contains('?')) {
@@ -50,6 +67,7 @@ function Resolve-Child([string]$Root, [string]$Relative) {
 }
 
 try {
+    Register-AppIcon
     if (Test-Path -LiteralPath $disabledPath) {
         exit 0
     }
@@ -133,7 +151,7 @@ try {
     $operations = [Collections.Generic.List[object]]::new()
     foreach ($file in Get-ChildItem -LiteralPath $extracted -File -Recurse -Force) {
         $relative = $file.FullName.Substring($extracted.Length + 1).Replace('\', '/')
-        if ($relative -notmatch '^(bridge/|overlay/|docs/|licenses/|scripts/|runtime/|README\.md$|build-info\.json$|obs-plugins/|bin/|data/obs-plugins/obs-unified-chat/)') {
+        if ($relative -notmatch '^(bridge/|overlay/|docs/|licenses/|scripts/|runtime/|appicon\.ico$|README\.md$|build-info\.json$|obs-plugins/|bin/|data/obs-plugins/obs-unified-chat/)') {
             throw 'Unexpected file in update package'
         }
         $targets = @((Resolve-Child $packagePath $relative))

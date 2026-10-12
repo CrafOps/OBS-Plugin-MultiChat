@@ -51,6 +51,27 @@ foreach ($relative in @('bridge/dist/main.js', 'runtime/node.exe', 'scripts/auto
         throw "Installed package is missing $relative"
     }
 }
+$uninstallKeys = Get-ChildItem -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall'
+$registration = $uninstallKeys | Get-ItemProperty | Where-Object DisplayName -eq 'Multi Live Chat by @CrafOps'
+if ($registration.DisplayIcon -ne (Join-Path $destination 'appicon.ico') -or
+    -not (Test-Path -LiteralPath $registration.DisplayIcon)) {
+    throw 'Programs and Features icon is missing or not registered'
+}
+Remove-ItemProperty -LiteralPath $registration.PSPath -Name DisplayIcon
+$repair = Join-Path $fixture 'repair-icon.ps1'
+@'
+param([string]$PackageRoot, [string]$ObsRoot)
+function Invoke-RestMethod {
+    throw 'Simulated offline update check'
+}
+& (Join-Path $PackageRoot 'scripts/auto-update.ps1') -PackageRoot $PackageRoot -ObsRoot $ObsRoot `
+    -ObsPid 999999 -ObsVersion '32.2.2' -QtVersion '6.11.1'
+'@ | Set-Content -LiteralPath $repair -Encoding utf8
+& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $repair -PackageRoot $destination -ObsRoot $obs
+$repaired = Get-ItemProperty -LiteralPath $registration.PSPath
+if ($repaired.DisplayIcon -ne (Join-Path $destination 'appicon.ico')) {
+    throw 'Existing install icon registration was not repaired at updater startup'
+}
 $settings = Get-ItemProperty -LiteralPath 'HKCU:\Software\OBSUnifiedChat\NativeDock'
 if ($settings.bridgeRoot -ne $destination -or $settings.nodePath -ne (Join-Path $destination 'runtime/node.exe') -or
     $settings.autoUpdate -ne 1 -or $settings.startWithObs -ne 1) {
