@@ -37,6 +37,7 @@ export type PlatformState = {
   detail: string;
   account?: string;
   title?: string;
+  viewers?: number;
   canReply: boolean;
 };
 

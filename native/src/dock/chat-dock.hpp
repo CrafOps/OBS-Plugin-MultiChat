@@ -52,6 +52,8 @@ private:
     QCheckBox *autoReconnect;
     QCheckBox *tiktokEnabled;
     QCheckBox *startWithObs;
+    QCheckBox *autoUpdate;
+    QLabel *updateLabel;
     QSpinBox *messageLimit;
     QSpinBox *fontSize;
     QSpinBox *overlayLimit;

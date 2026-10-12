@@ -3,6 +3,7 @@ import { LiveChat, type ChatItem } from 'youtube-chat-next';
 import type { ChatEngine } from '../services/engine.js';
 import type { ChatEvent, PlatformState } from '../types/protocol.js';
 import { safeMediaUrl } from '../types/media.js';
+import { ChannelNames, publicPage, watchMetadata } from './youtube-metadata.js';
 
 export function normalizePublicYouTube(item: ChatItem): ChatEvent {
   const text = item.message.map(part => 'text' in part ? part.text : part.emojiText || part.alt).join('');
@@ -49,10 +50,52 @@ export class PublicYouTubeConnector {
   private generation = 0;
   private timer?: NodeJS.Timeout;
   private failures = 0;
+  private metadataTimer?: NodeJS.Timeout;
+  private metadata: ReturnType<typeof watchMetadata> = {};
+  private names = new ChannelNames();
+  private metadataActive = false;
 
   constructor(private engine: ChatEngine, private changed: (state: PlatformState) => void,
     private factory = (videoId: string): PublicChatClient =>
-      new LiveChat({ liveId: videoId }, 2000, 'live') as unknown as PublicChatClient) {}
+      new LiveChat({ liveId: videoId }, 2000, 'live') as unknown as PublicChatClient,
+    private loadMetadata = publicPage) {}
+
+  private report(state: PlatformState): void {
+    this.changed({ ...state, ...(state.status === 'connected' ? this.metadata : {}) });
+  }
+
+  private async refreshMetadata(videoId: string, generation: number): Promise<void> {
+    try {
+      const metadata = watchMetadata(await this.loadMetadata(`watch?v=${videoId}&hl=en`));
+      if (generation !== this.generation || !this.metadataActive) {
+        return;
+      }
+      this.metadata = metadata;
+      this.report({ status: 'connected', detail: 'Public YouTube chat · viewers refresh every 30 seconds',
+        title: videoId, canReply: false });
+    } catch {
+      if (generation === this.generation && this.metadataActive) {
+        this.metadata.viewers = undefined;
+        this.report({ status: 'connected', detail: 'Public chat connected · viewer count unavailable',
+          title: videoId, canReply: false });
+      }
+    }
+    if (generation === this.generation && this.metadataActive) {
+      this.metadataTimer = setTimeout(() => void this.refreshMetadata(videoId, generation), 30000);
+      this.metadataTimer.unref();
+    }
+  }
+
+  private async acceptNamed(item: ChatItem, generation: number): Promise<void> {
+    const name = await this.names.get(item.author.channelId);
+    if (generation !== this.generation) {
+      return;
+    }
+    const event = normalizePublicYouTube(item);
+    event.user.displayName = name.displayName ?? event.user.displayName;
+    event.user.username = name.handle ?? event.user.username;
+    this.engine.accept(event);
+  }
 
   async connect(videoId: string): Promise<void> {
     this.stop();
@@ -60,16 +103,20 @@ export class PublicYouTubeConnector {
     const client = this.factory(videoId);
     this.client = client;
     let lastError = '';
-    this.changed({ status: 'connecting', detail: 'Opening public YouTube LIVE chat (unofficial, no API key)',
+    this.report({ status: 'connecting', detail: 'Opening public YouTube LIVE chat (unofficial, no API key)',
       title: videoId, canReply: false });
     client.on('chat', (item: ChatItem) => {
       if (generation !== this.generation) {
         return;
       }
       try {
-        this.engine.accept(normalizePublicYouTube(item));
+        if (/^UC[\w-]{22}$/.test(item.author.channelId)) {
+          void this.acceptNamed(item, generation).catch(() => undefined);
+        } else {
+          this.engine.accept(normalizePublicYouTube(item));
+        }
         this.failures = 0;
-        this.changed({ status: 'connected', detail: 'Receiving public YouTube chat (read-only, no API key)',
+        this.report({ status: 'connected', detail: 'Receiving public YouTube chat (read-only, no API key)',
           title: videoId, canReply: false });
       } catch {
         // Unknown upstream event shapes must not crash the bridge.
@@ -80,15 +127,19 @@ export class PublicYouTubeConnector {
         return;
       }
       const name = (error as { constructor?: { name?: string } })?.constructor?.name;
+      this.metadataActive = false;
+      clearTimeout(this.metadataTimer);
       lastError = name === 'NotLiveError' ? 'No public active chat found for this video'
         : name === 'RateLimitError' ? 'YouTube rate limited this connection; waiting to reconnect'
         : name === 'ScrapeError' ? 'Public chat initialization unavailable; check that this video is currently LIVE with chat enabled'
         : 'Public YouTube chat could not be read; network restriction or web reader unavailable';
-      this.changed({ status: 'error', detail: lastError, title: videoId, canReply: false });
+      this.report({ status: 'error', detail: lastError, title: videoId, canReply: false });
     });
     client.on('end', () => {
       if (generation === this.generation) {
-        this.changed({ status: lastError ? 'error' : 'offline',
+        clearTimeout(this.metadataTimer);
+        this.metadataActive = false;
+        this.report({ status: lastError ? 'error' : 'offline',
           detail: lastError || 'Public YouTube chat ended', title: videoId, canReply: false });
         this.retry(videoId, generation);
       }
@@ -100,14 +151,16 @@ export class PublicYouTubeConnector {
         return;
       }
       if (started) {
-        this.changed({ status: 'connected', detail: 'Connected to public YouTube chat (read-only, no API key)',
+        this.metadataActive = true;
+        this.report({ status: 'connected', detail: 'Connected to public YouTube chat (read-only, no API key)',
           title: videoId, canReply: false });
+        void this.refreshMetadata(videoId, generation);
       } else {
         this.retry(videoId, generation);
       }
     } catch {
       if (generation === this.generation) {
-        this.changed({ status: 'error', detail: 'Public YouTube chat reader failed to start',
+        this.report({ status: 'error', detail: 'Public YouTube chat reader failed to start',
           title: videoId, canReply: false });
         this.retry(videoId, generation);
       }
@@ -128,6 +181,9 @@ export class PublicYouTubeConnector {
   stop(): void {
     this.generation += 1;
     clearTimeout(this.timer);
+    clearTimeout(this.metadataTimer);
+    this.metadata = {};
+    this.metadataActive = false;
     this.timer = undefined;
     this.client?.stop();
     this.client?.removeAllListeners();

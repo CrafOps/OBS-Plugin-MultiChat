@@ -4,6 +4,7 @@ import type { ChatEngine } from '../services/engine.js';
 import type { ChatEvent, PlatformState } from '../types/protocol.js';
 import type { LiveConnector } from './connector.js';
 import { safeMediaUrl } from '../types/media.js';
+import { viewerCount } from './youtube-metadata.js';
 
 type TikTokImage = { urlList?: string[] };
 
@@ -124,6 +125,14 @@ export class TikTokConnector implements LiveConnector {
       const connection = new TikTokLiveConnection(username, { enableExtendedGiftInfo: false }) as
         import('tiktok-live-connector').TikTokLiveConnection & EventEmitter;
       this.connection = connection;
+      let currentViewers: number | undefined;
+      connection.on(WebcastEvent.ROOM_USER, (data: { total?: string; viewerCount?: number }) => {
+        // v3 total is current room audience; totalUser is cumulative and must not be used.
+        currentViewers = viewerCount(data.total ?? data.viewerCount);
+        if (generation === this.generation && this.state.status === 'connected') {
+          this.update({ ...this.state, viewers: currentViewers });
+        }
+      });
       const eventTypes: [string, ChatEvent['type']][] = [
         [WebcastEvent.CHAT, 'message'], [WebcastEvent.GIFT, 'gift'],
         [WebcastEvent.LIKE, 'like'], [WebcastEvent.FOLLOW, 'follow'], [WebcastEvent.MEMBER, 'join']
@@ -149,7 +158,8 @@ export class TikTokConnector implements LiveConnector {
         return;
       }
       this.failures = 0;
-      this.update({ status: 'connected', detail: 'Receiving unofficial TikTok LIVE events', account: username, canReply: false });
+      this.update({ status: 'connected', detail: 'Receiving unofficial TikTok LIVE events', account: username,
+        viewers: currentViewers, canReply: false });
     } catch (error) {
       this.retry(username, generation, tiktokErrorDetail(error));
     }

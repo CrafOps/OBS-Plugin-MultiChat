@@ -9,6 +9,7 @@ import type { ChatEngine } from '../services/engine.js';
 import type { PlatformState, ChatEvent } from '../types/protocol.js';
 import { youtubeVideoId } from '../types/youtube-target.js';
 import { PublicYouTubeConnector } from './youtube-public.js';
+import { viewerCount } from './youtube-metadata.js';
 
 export function manualLiveChat(video: youtube_v3.Schema$Video | undefined): {
   chatId?: string;
@@ -220,7 +221,9 @@ export class YouTubeConnector {
         this.broadcasts = [];
         this.failures = 0;
         this.update({ status: this.chatId ? 'connected' : 'offline',
-          title: selected.title, detail: selected.detail, canReply: false });
+            title: selected.title, detail: selected.detail, canReply: false,
+            account: result.data.items?.[0]?.snippet?.channelTitle ?? undefined,
+            viewers: this.chatId ? viewerCount(result.data.items?.[0]?.liveStreamingDetails?.concurrentViewers) : undefined });
         if (this.chatId) {
           void this.poll(generation);
         } else if (this.engine.settings.autoDetect) {

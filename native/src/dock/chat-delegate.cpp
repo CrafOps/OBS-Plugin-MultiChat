@@ -88,7 +88,11 @@ QString content(const QJsonObject &event)
         "<div style='font-size:9pt;color:%2;'>%3 <span style='color:#969eb3;'>%4 · %7</span></div>"
         "<div style='margin-top:7px;color:#d9deeb;'>%5</div>"
         "<div style='margin-top:4px;color:#f5cb79;'>%8 %6</div>")
-        .arg(user.value("displayName").toString().toHtmlEscaped(),
+        .arg((user.value("displayName").toString()
+            + (user.value("username").toString() != user.value("displayName").toString()
+                && !user.value("username").toString().isEmpty()
+                ? QString(" (%1%2)").arg(user.value("username").toString().startsWith('@') ? "" : "@",
+                    user.value("username").toString()) : QString())).toHtmlEscaped(),
             platform == "youtube" ? "#ff828e" : "#60ded5",
             platform == "youtube" ? "YOUTUBE" : "TIKTOK",
             badges.join(" · "), body, payment.toHtmlEscaped(),

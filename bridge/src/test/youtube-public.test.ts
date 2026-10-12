@@ -41,7 +41,7 @@ test('public reader receives events and suppresses stale events after switching 
     const client = new FakeClient();
     clients.push(client);
     return client;
-  });
+  }, async () => '');
   await connector.connect('vf8alkN0zXw');
   clients[0]!.emit('chat', item);
   assert.equal(engine.history.length, 1);

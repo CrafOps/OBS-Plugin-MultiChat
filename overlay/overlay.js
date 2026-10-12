@@ -54,7 +54,9 @@ function display(event) {
   element.className = `message ${platform} ${type}`;
   const author = document.createElement('span');
   author.className = 'author';
-  author.textContent = `${platform === 'youtube' ? 'YouTube' : 'TikTok'} · ${event.user.displayName}`;
+  const handle = event.user.username && event.user.username !== event.user.displayName
+    ? ` (${event.user.username.startsWith('@') ? '' : '@'}${event.user.username})` : '';
+  author.textContent = `${platform === 'youtube' ? 'YouTube' : 'TikTok'} · ${event.user.displayName}${handle}`;
   if (event.user.avatarUrl) {
     author.prepend(mediaImage(event.user.avatarUrl, '', 'avatar'));
   }

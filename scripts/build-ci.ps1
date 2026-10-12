@@ -201,7 +201,8 @@ foreach ($backendName in @('qschannelbackend', 'qcertonlybackend')) {
 }
 
 $manifest = [ordered]@{
-    pluginVersion = '0.1.0'
+    pluginVersion = '0.2.0'
+    buildNumber = if ($env:GITHUB_RUN_NUMBER) { [long]$env:GITHUB_RUN_NUMBER } else { 0 }
     obsVersion = $expectedObs
     obsSourceCommit = (& git -C $obsSource rev-parse HEAD)
     qtVersion = $actualQt

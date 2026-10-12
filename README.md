@@ -78,3 +78,6 @@ API references used for implementation:
 - [YouTube authorized chat insert](https://developers.google.com/youtube/v3/live/docs/liveChatMessages/insert)
 - [TikTok Login Kit overview](https://developers.tiktok.com/doc/login-kit-overview/)
 - [TikTok connector source](https://github.com/zerodytrash/TikTok-Live-Connector)
+# Multi Live Chat by @CrafOps — latest update
+
+Per-platform live viewer counts, YouTube display names with handles, and automatic updates are available in the latest Windows release. See [installation and automatic updates](docs/AUTO_UPDATE.md). Install this release once; future compatible releases download at OBS startup and install after OBS closes.

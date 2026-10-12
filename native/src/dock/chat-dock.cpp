@@ -19,6 +19,11 @@
 #include <QFrame>
 #include <QFont>
 #include <QFileDialog>
+#include <QFile>
+#include <QDir>
+#include <QCoreApplication>
+#include <obs.h>
+#include <windows.h>
 #include "chat-delegate.hpp"
 
 ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
@@ -168,9 +173,12 @@ ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(12, 14, 12, 10);
     layout->setSpacing(10);
-    auto *brand = new QLabel("MULTICHAT");
+    auto *brand = new QLabel("Multi Live Chat");
     brand->setObjectName("brand");
     layout->addWidget(brand);
+    auto *credit = new QLabel("by @CrafOps");
+    credit->setObjectName("muted");
+    layout->addWidget(credit);
     auto *connections = new QHBoxLayout;
     youtubeStatus = new QLabel("● YouTube");
     tiktokStatus = new QLabel("● TikTok");
@@ -354,6 +362,14 @@ ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
     autoReconnect = new QCheckBox("Reconnect platform sessions");
     autoReconnect->setChecked(true);
     form->addRow(startWithObs);
+    autoUpdate = new QCheckBox("Automatically update when OBS closes");
+    autoUpdate->setChecked(local.value("autoUpdate", true).toBool());
+    autoUpdate->setToolTip("Checks GitHub Releases at startup; installs verified updates after OBS exits.");
+    form->addRow(autoUpdate);
+    updateLabel = new QLabel("Updates are checked when OBS starts");
+    updateLabel->setWordWrap(true);
+    updateLabel->setObjectName("muted");
+    form->addRow(updateLabel);
     form->addRow(autoReconnect);
     auto *displayGroup = new QGroupBox("Chat appearance");
     auto *displayForm = new QFormLayout(displayGroup);
@@ -454,6 +470,36 @@ ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
     if (startWithObs->isChecked()) {
         QTimer::singleShot(0, &bridge, &BridgeClient::start);
     }
+    const auto packageRoot = rootPath->text().trimmed();
+    const auto updater = QDir(packageRoot).filePath("scripts/auto-update.ps1");
+    if (autoUpdate->isChecked() && !packageRoot.isEmpty() && QFile::exists(updater)) {
+        QProcess helper;
+        wchar_t systemDirectory[MAX_PATH]{};
+        GetSystemDirectoryW(systemDirectory, MAX_PATH);
+        helper.setProgram(QDir(QString::fromWCharArray(systemDirectory))
+            .filePath("WindowsPowerShell/v1.0/powershell.exe"));
+        helper.setArguments({"-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+            "-File", updater, "-PackageRoot", packageRoot,
+            "-ObsRoot", QDir(QCoreApplication::applicationDirPath()).absoluteFilePath("../.."),
+            "-ObsPid", QString::number(QCoreApplication::applicationPid()),
+            "-ObsVersion", QString::fromUtf8(obs_get_version_string()), "-QtVersion", qVersion()});
+        helper.setCreateProcessArgumentsModifier([](QProcess::CreateProcessArguments *arguments) {
+            arguments->flags |= CREATE_NO_WINDOW;
+        });
+        if (!helper.startDetached()) {
+            updateLabel->setText("Could not start automatic updater");
+        }
+        auto *updateTimer = new QTimer(this);
+        connect(updateTimer, &QTimer::timeout, this, [this, packageRoot] {
+            QFile status(QDir(packageRoot).filePath(".update-status.txt"));
+            if (status.open(QIODevice::ReadOnly)) {
+                updateLabel->setText(QString::fromUtf8(status.read(1024)).trimmed());
+            }
+        });
+        updateTimer->start(5000);
+    } else if (autoUpdate->isChecked()) {
+        updateLabel->setText("Choose the new release package folder, then restart OBS to enable updates");
+    }
 }
 
 void ChatDock::saveSettings()
@@ -465,6 +511,7 @@ void ChatDock::saveSettings()
     local.setValue("youtubeClientSecret", clientSecret->text().trimmed());
     local.setValue("youtubeApiKey", apiKey->text().trimmed());
     local.setValue("startWithObs", startWithObs->isChecked());
+    local.setValue("autoUpdate", autoUpdate->isChecked());
     settings.insert("tiktokUsername", username->text().trimmed());
     settings.insert("tiktokEnabled", tiktokEnabled->isChecked());
     settings.insert("autoDetect", autoDetect->isChecked());
@@ -532,8 +579,12 @@ void ChatDock::receive(const QJsonObject &message)
                 : status == "connecting" ? "#f5cb79" : status == "error" ? "#ff828e" : "#929db3";
             const auto tag = status == "connected" ? "LIVE"
                 : status == "connecting" ? "…" : status == "error" ? "ERROR" : "OFF";
-            label->setText(QString("● %1 · %2").arg(name, tag));
-            label->setToolTip(QString("%1 · %2\n%3").arg(name, status, state.value("detail").toString()));
+            const auto count = state.value("viewers");
+            const auto viewers = status == "connected" && count.isDouble()
+                ? QString::number(static_cast<qint64>(count.toDouble())) : QString("—");
+            label->setText(QString("● %1 · %2\n%3 viewers").arg(name, tag, viewers));
+            label->setToolTip(QString("%1 · %2\nViewers: %3\n%4")
+                .arg(name, status, viewers, state.value("detail").toString()));
             label->setStyleSheet(QString("color: %1; font-size: 10px;").arg(color));
         };
         updateStatus(youtubeStatus, "YouTube", youtube);
@@ -587,7 +638,8 @@ void ChatDock::addEvent(const QJsonObject &event)
     }
     auto text = QString("%1  [%2] %3 %4\n%5")
         .arg(QDateTime::fromMSecsSinceEpoch(timestamp).toString("HH:mm:ss"), platformName,
-            user.value("displayName").toString(), badges.join(" · "), event.value("message").toString());
+            user.value("displayName").toString() + " " + user.value("username").toString(),
+            badges.join(" · "), event.value("message").toString());
     const auto monetary = event.value("monetaryEvent").toObject();
     if (!monetary.isEmpty()) {
         text += QString("\n%1 %2  %3 ×%4")

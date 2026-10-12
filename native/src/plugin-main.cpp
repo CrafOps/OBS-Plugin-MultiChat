@@ -8,7 +8,7 @@ OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE("obs-unified-chat", "en-US")
 MODULE_EXPORT const char *obs_module_description(void)
 {
-    return "Native unified YouTube and TikTok LIVE chat dock";
+    return "Multi Live Chat by @CrafOps — YouTube and TikTok LIVE chat";
 }
 
 static QPointer<ChatDock> dock;
@@ -18,7 +18,7 @@ static void frontendEvent(enum obs_frontend_event event, void *)
 {
     if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING && !dock) {
         auto *widget = new ChatDock;
-        if (obs_frontend_add_dock_by_id(dockId, "Unified Live Chat", widget)) {
+        if (obs_frontend_add_dock_by_id(dockId, "Multi Live Chat by @CrafOps", widget)) {
             dock = widget;
         } else {
             delete widget;
