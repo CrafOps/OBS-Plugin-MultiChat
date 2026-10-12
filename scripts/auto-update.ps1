@@ -8,6 +8,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repository = 'PPekKunGzDev/-OBS-Plugin-MultiChat'
+$repositoryId = 1414781362L
 $packagePath = [IO.Path]::GetFullPath($PackageRoot).TrimEnd('\', '/')
 $obsPath = [IO.Path]::GetFullPath($ObsRoot).TrimEnd('\', '/')
 $statusPath = Join-Path $packagePath '.update-status.txt'
@@ -84,6 +85,20 @@ try {
     Set-UpdateStatus 'Checking GitHub Releases...'
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     $headers = @{ 'User-Agent' = 'Multi-Live-Chat-Updater'; 'Accept' = 'application/vnd.github+json' }
+    try {
+        $identity = Invoke-RestMethod -Uri "https://api.github.com/repositories/$repositoryId" `
+            -Headers $headers -TimeoutSec 20
+    } catch {
+        # The documented name endpoint follows GitHub's transfer/rename redirects.
+        # Identity verification also protects against reuse of the original name.
+        $identity = Invoke-RestMethod -Uri "https://api.github.com/repos/$repository" `
+            -Headers $headers -TimeoutSec 20
+    }
+    if ([long]$identity.id -ne $repositoryId -or $identity.private -ne $false -or
+        $identity.full_name -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') {
+        throw 'The update source is not the original public repository'
+    }
+    $repository = [string]$identity.full_name
     $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$repository/releases/latest" `
         -Headers $headers -TimeoutSec 20
     $manifestAsset = @($release.assets | Where-Object name -eq 'update-manifest.json')
@@ -101,6 +116,9 @@ try {
         throw 'Invalid update manifest size'
     }
     $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    if ($manifest.repositoryId -and [long]$manifest.repositoryId -ne $repositoryId) {
+        throw 'Update manifest belongs to a different repository'
+    }
     if ($manifest.schema -ne 1 -or $manifest.architecture -ne 'x64' -or
         $manifest.configuration -ne 'Release' -or $manifest.obsVersion -ne $ObsVersion -or
         $manifest.qtVersion -ne $QtVersion -or $manifest.sha256 -notmatch '^[a-fA-F0-9]{64}$' -or

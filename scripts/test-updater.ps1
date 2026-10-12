@@ -12,12 +12,37 @@ param([string]$Fixture, [string]$Updater)
 $ErrorActionPreference = 'Stop'
 $env:LOCALAPPDATA = Join-Path $Fixture 'local'
 function Invoke-RestMethod {
+    param([string]$Uri, [object]$Headers, [int]$TimeoutSec)
+    $scenario = Split-Path -Leaf $Fixture
+    $repository = 'PPekKunGzDev/-OBS-Plugin-MultiChat'
+    if ($scenario -eq 'renamed') {
+        $repository = 'PPekKunGzDev/RenamedLiveChat'
+    } elseif ($scenario -eq 'transferred') {
+        $repository = 'ExampleOrg/MultiLiveChat'
+    }
+    if (-not $Uri.EndsWith('/releases/latest')) {
+        if ($scenario -eq 'fallback' -and $Uri.Contains('/repositories/')) {
+            throw 'Simulated ID endpoint unavailable'
+        }
+        return [pscustomobject]@{
+            id = if ($scenario -eq 'wrong-repository') { 999999 } else { 1414781362 }
+            full_name = $repository
+            private = $false
+        }
+    }
+    if ($Uri -ne "https://api.github.com/repos/$repository/releases/latest") {
+        throw 'Updater did not use the resolved repository name'
+    }
+    $downloadRepository = $repository
+    if ($scenario -eq 'foreign-asset') {
+        $downloadRepository = 'UntrustedOwner/UnrelatedRepo'
+    }
     return [pscustomobject]@{
         draft = $false
         prerelease = $false
         assets = @(
-            [pscustomobject]@{ name = 'update-manifest.json'; browser_download_url = 'https://github.com/PPekKunGzDev/-OBS-Plugin-MultiChat/releases/download/build-2/update-manifest.json' },
-            [pscustomobject]@{ name = 'multi-live-chat-windows-x64.zip'; browser_download_url = 'https://github.com/PPekKunGzDev/-OBS-Plugin-MultiChat/releases/download/build-2/multi-live-chat-windows-x64.zip'; size = 4096 }
+            [pscustomobject]@{ name = 'update-manifest.json'; browser_download_url = "https://github.com/$downloadRepository/releases/download/build-2/update-manifest.json" },
+            [pscustomobject]@{ name = 'multi-live-chat-windows-x64.zip'; browser_download_url = "https://github.com/$downloadRepository/releases/download/build-2/multi-live-chat-windows-x64.zip"; size = 4096 }
         )
     }
 }
@@ -49,7 +74,8 @@ if ($held) {
 exit $LASTEXITCODE
 '@ | Set-Content -LiteralPath $runner -Encoding utf8
 
-foreach ($scenario in @('success', 'checksum', 'incompatible', 'traversal', 'locked', 'rollback')) {
+foreach ($scenario in @('success', 'renamed', 'transferred', 'fallback', 'wrong-repository',
+    'foreign-asset', 'checksum', 'incompatible', 'traversal', 'locked', 'rollback')) {
     $fixture = Join-Path $testRoot $scenario
     $payload = Join-Path $fixture 'payload'
     foreach ($directory in @('installed', 'obs/bin/64bit', 'obs/obs-plugins/64bit', 'payload/obs-plugins/64bit',
@@ -107,7 +133,7 @@ foreach ($scenario in @('success', 'checksum', 'incompatible', 'traversal', 'loc
     $plugin = (Get-Content -LiteralPath (Join-Path $fixture 'obs/obs-plugins/64bit/obs-unified-chat.dll') -Raw).Trim()
     $installed = Get-Content -LiteralPath (Join-Path $fixture 'installed/build-info.json') -Raw | ConvertFrom-Json
     $status = Get-Content -LiteralPath (Join-Path $fixture 'installed/.update-status.txt') -Raw
-    if ($scenario -eq 'success') {
+    if ($scenario -in @('success', 'renamed', 'transferred', 'fallback')) {
         if ($code -ne 0 -or $plugin -ne 'new-plugin' -or $installed.buildNumber -ne 2 -or $status -notmatch 'Updated to build') {
             throw "Successful update fixture failed: $status"
         }

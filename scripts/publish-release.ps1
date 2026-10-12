@@ -9,6 +9,7 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 $build = Get-Content -LiteralPath (Join-Path $stage 'build-info.json') -Raw | ConvertFrom-Json
 $manifest = [ordered]@{
     schema = 1
+    repositoryId = [long]$env:GITHUB_REPOSITORY_ID
     pluginVersion = $build.pluginVersion
     buildNumber = $build.buildNumber
     pluginCommit = $build.pluginCommit

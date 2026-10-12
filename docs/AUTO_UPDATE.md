@@ -24,3 +24,11 @@ The extracted package and OBS destination folders must be writable by your Windo
 The updater accepts Release builds for Windows x64 only, requires exact OBS and Qt version matches, validates archive paths and limits, refuses linked destination paths, and replaces only the plugin's known DLLs within OBS. Existing files are backed up and restored if installation fails. GitHub Releases and HTTPS are the trust source; the checksum detects corruption, not a compromised release publisher. Keep the package folder under your own account's control. Settings and credentials are stored separately and are preserved.
 
 The build workflow publishes permanent ZIP and update-manifest assets only after bridge tests, native compilation and native UI/media checks pass on pushes to master. Debug builds and pull requests do not publish automatic updates. Actual OBS rendering and long-running live connections still need user validation.
+
+## Repository renames and organization transfers
+
+Install the migration-ready release before renaming or transferring this repository. Allow the current updater to download it at OBS startup, close OBS to apply it, and reopen OBS. The installed `build-info.json` reports `updaterSupportsRepositoryMoves: true` once ready.
+
+The new updater pins repository ID `1414781362`, resolves its current owner/name through GitHub, and validates Release asset links against that resolved name. If the ID endpoint is unavailable, the original name endpoint and GitHub redirects are used, with the same required ID check. A different repository reusing the old name is rejected. Release manifests also carry the repository ID. Installer website links follow the build's current repository name.
+
+Renaming or transferring the same repository preserves this identity. Keep the repository public for anonymous update downloads and allow the build workflow to publish Releases under the new organization's Actions policy. Creating a new repository or a fork creates a different identity and requires an intentional update-source migration. Already installed versions that predate this support must upgrade before the move; after the move those older versions may need the new Setup once.
