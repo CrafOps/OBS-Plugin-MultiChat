@@ -129,12 +129,12 @@ try {
     $operations = [Collections.Generic.List[object]]::new()
     foreach ($file in Get-ChildItem -LiteralPath $extracted -File -Recurse -Force) {
         $relative = $file.FullName.Substring($extracted.Length + 1).Replace('\', '/')
-        if ($relative -notmatch '^(bridge/|overlay/|docs/|licenses/|scripts/|README\.md$|build-info\.json$|obs-plugins/|bin/)') {
+        if ($relative -notmatch '^(bridge/|overlay/|docs/|licenses/|scripts/|README\.md$|build-info\.json$|obs-plugins/|bin/|data/obs-plugins/obs-unified-chat/)') {
             throw 'Unexpected file in update package'
         }
         $targets = @((Resolve-Child $packagePath $relative))
-        if ($relative.StartsWith('obs-plugins/') -or $relative.StartsWith('bin/')) {
-            if ($relative -notmatch '^(obs-plugins/64bit/obs-unified-chat\.dll|bin/64bit/Qt6(WebSockets|Concurrent)\.dll|bin/64bit/imageformats/q(gif|jpeg|webp)\.dll|bin/64bit/tls/q(schannel|certonly)backend\.dll)$') {
+        if ($relative.StartsWith('obs-plugins/') -or $relative.StartsWith('bin/') -or $relative.StartsWith('data/')) {
+            if ($relative -notmatch '^(obs-plugins/64bit/obs-unified-chat\.dll|bin/64bit/Qt6(WebSockets|Concurrent)\.dll|bin/64bit/imageformats/q(gif|jpeg|webp)\.dll|bin/64bit/tls/q(schannel|certonly)backend\.dll|data/obs-plugins/obs-unified-chat/locale/[a-zA-Z0-9_-]+\.ini)$') {
                 throw 'Update tried to replace an unsupported OBS runtime file'
             }
             $targets += Resolve-Child $obsPath $relative

@@ -52,7 +52,8 @@ exit $LASTEXITCODE
 foreach ($scenario in @('success', 'checksum', 'incompatible', 'traversal', 'locked', 'rollback')) {
     $fixture = Join-Path $testRoot $scenario
     $payload = Join-Path $fixture 'payload'
-    foreach ($directory in @('installed', 'obs/bin/64bit', 'obs/obs-plugins/64bit', 'payload/obs-plugins/64bit', 'payload/bridge')) {
+    foreach ($directory in @('installed', 'obs/bin/64bit', 'obs/obs-plugins/64bit', 'payload/obs-plugins/64bit',
+        'payload/bridge', 'payload/data/obs-plugins/obs-unified-chat/locale')) {
         New-Item -ItemType Directory -Path (Join-Path $fixture $directory) -Force | Out-Null
     }
     $build = [ordered]@{
@@ -69,6 +70,7 @@ foreach ($scenario in @('success', 'checksum', 'incompatible', 'traversal', 'loc
     $build | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $fixture 'installed/build-info.json') -Encoding utf8
     'new-plugin' | Set-Content -LiteralPath (Join-Path $payload 'obs-plugins/64bit/obs-unified-chat.dll')
     'new-bridge' | Set-Content -LiteralPath (Join-Path $payload 'bridge/main.js')
+    'PluginName="Multi Live Chat by @CrafOps"' | Set-Content -LiteralPath (Join-Path $payload 'data/obs-plugins/obs-unified-chat/locale/en-US.ini')
     'old-plugin' | Set-Content -LiteralPath (Join-Path $fixture 'obs/obs-plugins/64bit/obs-unified-chat.dll')
     'fixture-exe' | Set-Content -LiteralPath (Join-Path $fixture 'obs/bin/64bit/obs64.exe')
     if ($scenario -eq 'locked') {
@@ -107,6 +109,9 @@ foreach ($scenario in @('success', 'checksum', 'incompatible', 'traversal', 'loc
     if ($scenario -eq 'success') {
         if ($code -ne 0 -or $plugin -ne 'new-plugin' -or $installed.buildNumber -ne 2 -or $status -notmatch 'Updated to build') {
             throw "Successful update fixture failed: $status"
+        }
+        if (-not (Test-Path -LiteralPath (Join-Path $fixture 'obs/data/obs-plugins/obs-unified-chat/locale/en-US.ini'))) {
+            throw 'Native locale data was not installed'
         }
     } elseif ($code -eq 0 -or $plugin -ne 'old-plugin' -or $installed.buildNumber -ne 1) {
         throw "Update guard / rollback fixture failed ($scenario): $status"
