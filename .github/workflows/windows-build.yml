@@ -87,11 +87,18 @@ jobs:
       - name: Test automatic updater with isolated fixtures
         run: ./scripts/test-updater.ps1
 
+      - name: Bundle portable runtime and build Windows installer
+        run: |
+          ./scripts/bundle-node.ps1
+          ./scripts/build-installer.ps1
+
       - name: Upload installable package
         uses: actions/upload-artifact@v4
         with:
           name: obs-unified-chat-obs32.2.2-qt6.11.1-windows-x64-${{ env.BUILD_CONFIGURATION }}
-          path: package/
+          path: |
+            package/
+            build/release/Multi-Live-Chat-Setup.exe
           if-no-files-found: error
           retention-days: 14
           compression-level: 6

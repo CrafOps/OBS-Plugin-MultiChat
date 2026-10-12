@@ -24,11 +24,11 @@ $notes = Join-Path $output 'notes.md'
 @"
 Multi Live Chat by @CrafOps — Windows x64, OBS $($build.obsVersion), Qt $($build.qtVersion).
 
-Download and extract the ZIP. For the first installation, copy obs-plugins and bin into the OBS installation and choose the extracted package folder in plugin Settings. Later releases install automatically after OBS closes. The package folder and OBS plugin folders must be writable.
+Download Multi-Live-Chat-Setup.exe, close OBS, and choose your OBS installation folder. Setup includes the portable chat runtime, installs the plugin and configures Settings automatically. Later compatible releases install after OBS closes. The package folder and OBS plugin folders must be writable. The ZIP is available for manual installation.
 
 Bridge tests and native UI checks passed. Actual OBS loading and public LIVE connectivity require user validation.
 "@ | Set-Content -LiteralPath $notes -Encoding utf8
-& gh release create "build-$($build.buildNumber)" $archive $manifestPath `
+& gh release create "build-$($build.buildNumber)" $archive $manifestPath (Join-Path $output 'Multi-Live-Chat-Setup.exe') `
     --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA `
     --title "Multi Live Chat 0.2.0 · build $($build.buildNumber)" --notes-file $notes --latest
 if ($LASTEXITCODE -ne 0) {

@@ -129,7 +129,7 @@ try {
     $operations = [Collections.Generic.List[object]]::new()
     foreach ($file in Get-ChildItem -LiteralPath $extracted -File -Recurse -Force) {
         $relative = $file.FullName.Substring($extracted.Length + 1).Replace('\', '/')
-        if ($relative -notmatch '^(bridge/|overlay/|docs/|licenses/|scripts/|README\.md$|build-info\.json$|obs-plugins/|bin/|data/obs-plugins/obs-unified-chat/)') {
+        if ($relative -notmatch '^(bridge/|overlay/|docs/|licenses/|scripts/|runtime/|README\.md$|build-info\.json$|obs-plugins/|bin/|data/obs-plugins/obs-unified-chat/)') {
             throw 'Unexpected file in update package'
         }
         $targets = @((Resolve-Child $packagePath $relative))

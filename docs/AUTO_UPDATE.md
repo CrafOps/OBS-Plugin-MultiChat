@@ -6,6 +6,12 @@ YouTube chat names use public channel metadata to show `Display name (@handle)` 
 
 ## Install this version once
 
+The easiest method is **Multi-Live-Chat-Setup.exe** from the latest Release. Close OBS, run Setup, confirm the detected OBS installation folder, and install. Setup bundles a portable Node runtime and configures Package folder, Node executable, Start with OBS and automatic updates. No separate Node installation or manual copying is required. Setup supports OBS 32.2.2 / Qt 6.11.1 and checks both versions before installing. OBS settings, platform accounts and chat credentials are preserved. If Windows protects the OBS installation, run Setup as administrator under the same Windows account; future background updates still require write access.
+
+To uninstall, close OBS and use Windows Installed apps → Multi Live Chat. Shared Qt runtimes and account credentials are preserved. Setup files are currently unsigned.
+
+The ZIP method below remains available for manual installation:
+
 1. Close OBS and download the ZIP from this repository's latest GitHub Release.
 2. Extract into a permanent folder where your Windows account can write. Keep the complete package, including `build-info.json` and `scripts/auto-update.ps1`.
 3. Copy `obs-plugins` and `bin` from the package into the OBS installation as for earlier versions. These folders contain the plugin and its additional Qt runtimes only.
