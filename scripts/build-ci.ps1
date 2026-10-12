@@ -129,7 +129,7 @@ try {
     $env:PATH = "$(Join-Path $qtPrefix 'bin');$savedRuntimePath"
     $env:QT_PLUGIN_PATH = Join-Path $qtPrefix 'plugins'
     $env:QT_QPA_PLATFORM = 'offscreen'
-    & ctest --test-dir $nativeBuild -C $Configuration --output-on-failure
+    & ctest --test-dir $nativeBuild -C $Configuration --output-on-failure --timeout 30
     Assert-NativeSuccess 'Native media and card layout checks'
 } finally {
     $env:PATH = $savedRuntimePath
