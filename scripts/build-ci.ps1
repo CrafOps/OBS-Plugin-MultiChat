@@ -201,7 +201,7 @@ foreach ($backendName in @('qschannelbackend', 'qcertonlybackend')) {
 }
 
 $manifest = [ordered]@{
-    pluginVersion = '0.2.1'
+    pluginVersion = '0.2.2'
     repositoryId = 1414781362
     updaterSupportsRepositoryMoves = $true
     buildNumber = if ($env:GITHUB_RUN_NUMBER) { [long]$env:GITHUB_RUN_NUMBER } else { 0 }

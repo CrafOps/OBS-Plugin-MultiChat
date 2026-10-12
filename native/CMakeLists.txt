@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(obs-unified-chat VERSION 0.2.1 LANGUAGES CXX)
+project(obs-unified-chat VERSION 0.2.2 LANGUAGES CXX)
 
 if(NOT WIN32 OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
   message(FATAL_ERROR "This plugin targets Windows x64")
