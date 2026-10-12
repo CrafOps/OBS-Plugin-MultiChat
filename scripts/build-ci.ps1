@@ -125,8 +125,30 @@ Assert-NativeSuccess 'Plugin build'
 $savedRuntimePath = $env:PATH
 $savedPluginPath = $env:QT_PLUGIN_PATH
 $savedQtPlatform = $env:QT_QPA_PLATFORM
+$runtimeBins = @((Join-Path $qtPrefix 'bin'))
+foreach ($prefix in ($dependencyPrefixes -split ';')) {
+    foreach ($subdirectory in @('bin', 'bin/64bit')) {
+        $candidate = Join-Path $prefix $subdirectory
+        if (Test-Path -LiteralPath $candidate) {
+            $runtimeBins += $candidate
+        }
+    }
+}
+if (-not ('UnifiedChatBuild.NativeErrorMode' -as [type])) {
+    Add-Type -TypeDefinition @'
+namespace UnifiedChatBuild
+{
+    public static class NativeErrorMode
+    {
+        [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+        public static extern uint SetErrorMode(uint mode);
+    }
+}
+'@
+}
+$savedErrorMode = [UnifiedChatBuild.NativeErrorMode]::SetErrorMode(0x8003)
 try {
-    $env:PATH = "$(Join-Path $qtPrefix 'bin');$savedRuntimePath"
+    $env:PATH = (($runtimeBins | Select-Object -Unique) -join ';') + ';' + $savedRuntimePath
     $env:QT_PLUGIN_PATH = Join-Path $qtPrefix 'plugins'
     $env:QT_QPA_PLATFORM = 'offscreen'
     & ctest --test-dir $nativeBuild -C $Configuration --output-on-failure --timeout 30
@@ -135,6 +157,7 @@ try {
     $env:PATH = $savedRuntimePath
     $env:QT_PLUGIN_PATH = $savedPluginPath
     $env:QT_QPA_PLATFORM = $savedQtPlatform
+    [UnifiedChatBuild.NativeErrorMode]::SetErrorMode($savedErrorMode) | Out-Null
 }
 & cmake --install $nativeBuild --config $Configuration --prefix $stage
 Assert-NativeSuccess 'Plugin staging'

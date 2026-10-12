@@ -19,7 +19,7 @@ $result = [Security.Cryptography.ProtectedData]::${operation}(
 `;
   return new Promise((resolve, reject) => {
     const child = execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script],
-      { windowsHide: true, timeout: 15000 }, (error, stdout) => {
+      { windowsHide: true, timeout: 45000 }, (error, stdout) => {
         if (error) {
           reject(new Error('Windows credential encryption failed'));
         } else {
