@@ -50,7 +50,7 @@ var
   SteamPath: String;
   Saved: String;
 begin
-  Result := ExpandConstant('{autopf}\obs-studio');
+  Result := ExpandConstant('{commonpf64}\obs-studio');
   if RegQueryStringValue(HKCU, 'Software\CrafOps\MultiLiveChat', 'ObsRoot', Saved) then
     if FileExists(Saved + '\bin\64bit\obs64.exe') then
       Result := Saved;

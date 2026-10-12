@@ -88,11 +88,13 @@ jobs:
         run: ./scripts/test-updater.ps1
 
       - name: Bundle portable runtime and build Windows installer
+        if: env.BUILD_CONFIGURATION == 'Release'
         run: |
           ./scripts/bundle-node.ps1
           ./scripts/build-installer.ps1
 
       - name: Test setup and uninstall in isolated folders
+        if: env.BUILD_CONFIGURATION == 'Release'
         run: ./scripts/test-installer.ps1
 
       - name: Upload installable package
