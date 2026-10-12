@@ -42,7 +42,8 @@ QString imageMarkup(const QString &url, const QString &alt, int size)
         return alt.toHtmlEscaped();
     }
     return QString("<img src='%1' alt='%2' width='%3' height='%3' style='vertical-align:middle;'>")
-        .arg(QUrl(url).toString(QUrl::FullyEncoded).toHtmlEscaped(), alt.toHtmlEscaped(), QString::number(size));
+        .arg(QUrl(url).toString(QUrl::FullyEncoded).toHtmlEscaped().replace("'", "&#39;"),
+            alt.toHtmlEscaped().replace("'", "&#39;"), QString::number(size));
 }
 
 QString content(const QJsonObject &event)
