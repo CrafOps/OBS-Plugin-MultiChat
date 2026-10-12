@@ -53,7 +53,7 @@ foreach ($relative in @('bridge/dist/main.js', 'runtime/node.exe', 'scripts/auto
 }
 $uninstallKeys = Get-ChildItem -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall'
 $registration = $uninstallKeys | Get-ItemProperty | Where-Object DisplayName -eq 'Multi Live Chat by @CrafOps'
-if ($registration.DisplayIcon -ne (Join-Path $destination 'appicon.ico') -or
+if ($registration.DisplayIcon -ne (Join-Path $destination 'scripts/appicon.ico') -or
     -not (Test-Path -LiteralPath $registration.DisplayIcon)) {
     throw 'Programs and Features icon is missing or not registered'
 }
@@ -69,7 +69,7 @@ function Invoke-RestMethod {
 '@ | Set-Content -LiteralPath $repair -Encoding utf8
 & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $repair -PackageRoot $destination -ObsRoot $obs
 $repaired = Get-ItemProperty -LiteralPath $registration.PSPath
-if ($repaired.DisplayIcon -ne (Join-Path $destination 'appicon.ico')) {
+if ($repaired.DisplayIcon -ne (Join-Path $destination 'scripts/appicon.ico')) {
     throw 'Existing install icon registration was not repaired at updater startup'
 }
 $settings = Get-ItemProperty -LiteralPath 'HKCU:\Software\OBSUnifiedChat\NativeDock'

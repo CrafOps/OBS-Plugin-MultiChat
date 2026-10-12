@@ -21,7 +21,7 @@ function Set-UpdateStatus([string]$Message) {
 }
 
 function Register-AppIcon {
-    $icon = Join-Path $packagePath 'appicon.ico'
+    $icon = Join-Path $packagePath 'scripts/appicon.ico'
     $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{F58E5F24-EEDE-44B8-A2AB-EDB867CB384E}_is1'
     if (-not (Test-Path -LiteralPath $icon) -or -not (Test-Path -LiteralPath $key)) {
         return
