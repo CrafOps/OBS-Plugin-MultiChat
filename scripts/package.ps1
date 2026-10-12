@@ -18,6 +18,11 @@ foreach ($name in @('package.json', 'package-lock.json')) {
     Copy-Item -LiteralPath (Join-Path $projectRoot "bridge/$name") -Destination (Join-Path $stage 'bridge') -Force
 }
 Copy-Item -LiteralPath (Join-Path $projectRoot 'README.md') -Destination $stage -Force
+$licenseDirectory = Join-Path $stage 'licenses'
+New-Item -ItemType Directory -Force -Path $licenseDirectory | Out-Null
+foreach ($name in @('LICENSE', 'NOTICE')) {
+    Copy-Item -LiteralPath (Join-Path $projectRoot $name) -Destination $licenseDirectory -Force
+}
 New-Item -ItemType Directory -Force -Path (Join-Path $stage 'scripts') | Out-Null
 Copy-Item -LiteralPath (Join-Path $projectRoot 'assets/appicon.ico') -Destination (Join-Path $stage 'scripts') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'auto-update.ps1') -Destination (Join-Path $stage 'scripts') -Force
