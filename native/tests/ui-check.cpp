@@ -13,12 +13,15 @@
 
 int main(int argc, char **argv)
 {
+    std::cerr << "Creating Qt application" << std::endl;
     QApplication application(argc, argv);
+    std::cerr << "Checking HTTPS" << std::endl;
     if (!QSslSocket::supportsSsl()) {
         std::cerr << "HTTPS media transport is unavailable\n";
         return 1;
     }
     const auto formats = QImageReader::supportedImageFormats();
+    std::cerr << "Checking image codecs" << std::endl;
     if (!formats.contains("jpeg") || !formats.contains("webp")) {
         std::cerr << "JPEG/WebP media decoder is unavailable\n";
         return 1;
@@ -32,15 +35,19 @@ int main(int argc, char **argv)
     }
 
     QBuffer gif;
-    gif.setData(QByteArray::fromBase64("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"));
+    gif.setData(QByteArray::fromHex(
+        "47494638396101000100800000000000ffffff"
+        "21f90401000000002c00000000010001000002024401003b"));
     gif.open(QIODevice::ReadOnly);
     QMovie movie(&gif, "gif");
+    std::cerr << "Checking GIF frame" << std::endl;
     if (!movie.isValid() || !movie.jumpToFrame(0) || movie.currentImage().isNull()) {
         std::cerr << "GIF decoder is unavailable\n";
         return 1;
     }
 
     QListWidget timeline;
+    std::cerr << "Checking wrapped card layout" << std::endl;
     timeline.resize(320, 500);
     auto *delegate = new ChatDelegate(&timeline);
     timeline.setItemDelegate(delegate);
