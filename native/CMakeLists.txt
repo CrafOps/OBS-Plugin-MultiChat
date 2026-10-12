@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(obs-unified-chat VERSION 0.2.0 LANGUAGES CXX)
+project(obs-unified-chat VERSION 0.2.1 LANGUAGES CXX)
 
 if(NOT WIN32 OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
   message(FATAL_ERROR "This plugin targets Windows x64")
@@ -40,7 +40,8 @@ target_link_libraries(obs-unified-chat PRIVATE
   OBS::libobs ${UNIFIED_CHAT_FRONTEND_TARGET}
   Qt6::Widgets Qt6::Network Qt6::WebSockets Qt6::Concurrent
 )
-target_compile_definitions(obs-unified-chat PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
+target_compile_definitions(obs-unified-chat PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX
+  UNIFIED_CHAT_VERSION="${PROJECT_VERSION}")
 target_compile_options(obs-unified-chat PRIVATE /W4 /permissive- /utf-8)
 set_target_properties(obs-unified-chat PROPERTIES PREFIX "")
 install(TARGETS obs-unified-chat LIBRARY DESTINATION obs-plugins/64bit

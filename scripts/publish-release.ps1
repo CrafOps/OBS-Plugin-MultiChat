@@ -31,7 +31,7 @@ Bridge tests and native UI checks passed. Actual OBS loading and public LIVE con
 "@ | Set-Content -LiteralPath $notes -Encoding utf8
 & gh release create "build-$($build.buildNumber)" $archive $manifestPath (Join-Path $output 'Multi-Live-Chat-Setup.exe') `
     --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA `
-    --title "Multi Live Chat 0.2.0 · build $($build.buildNumber)" --notes-file $notes --latest
+    --title "Multi Live Chat $($build.pluginVersion) · build $($build.buildNumber)" --notes-file $notes --latest
 if ($LASTEXITCODE -ne 0) {
     throw 'GitHub Release publication failed'
 }

@@ -126,7 +126,7 @@ try {
         throw 'Update is incompatible with this OBS / Qt version'
     }
     if ([long]$manifest.buildNumber -le [long]$installed.buildNumber) {
-        Set-UpdateStatus 'Multi Live Chat is up to date'
+        Set-UpdateStatus "Multi Live Chat v$($installed.pluginVersion) (build $($installed.buildNumber)) is up to date`nUpdate source: $repository"
         $cleanupWork = $true
         exit 0
     }

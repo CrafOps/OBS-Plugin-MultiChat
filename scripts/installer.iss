@@ -4,11 +4,14 @@
 #ifndef RepositoryName
   #define RepositoryName "PPekKunGzDev/-OBS-Plugin-MultiChat"
 #endif
+#ifndef PluginVersion
+  #define PluginVersion "0.2.1"
+#endif
 
 [Setup]
 AppId={{F58E5F24-EEDE-44B8-A2AB-EDB867CB384E}
 AppName=Multi Live Chat
-AppVersion=0.2.0.{#BuildNumber}
+AppVersion={#PluginVersion}.{#BuildNumber}
 AppPublisher=@CrafOps
 AppPublisherURL=https://github.com/{#RepositoryName}
 DefaultDirName={localappdata}\MultiLiveChat

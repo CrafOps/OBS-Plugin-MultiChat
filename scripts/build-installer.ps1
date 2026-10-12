@@ -13,6 +13,7 @@ if ($repositoryName -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') {
     throw 'Invalid repository name for installer metadata'
 }
 & $compiler "/DBuildNumber=$($build.buildNumber)" "/DRepositoryName=$repositoryName" `
+    "/DPluginVersion=$($build.pluginVersion)" `
     (Join-Path $PSScriptRoot 'installer.iss')
 if ($LASTEXITCODE -ne 0) {
     throw 'Installer compilation failed'

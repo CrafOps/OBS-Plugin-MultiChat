@@ -176,7 +176,7 @@ ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
     auto *brand = new QLabel("Multi Live Chat");
     brand->setObjectName("brand");
     layout->addWidget(brand);
-    auto *credit = new QLabel("by @CrafOps");
+    auto *credit = new QLabel(QString("by @CrafOps · v%1").arg(UNIFIED_CHAT_VERSION));
     credit->setObjectName("muted");
     layout->addWidget(credit);
     auto *connections = new QHBoxLayout;
