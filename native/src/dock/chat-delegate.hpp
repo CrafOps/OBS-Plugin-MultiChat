@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QStyledItemDelegate>
+#include "media-cache.hpp"
 
 class ChatDelegate final : public QStyledItemDelegate {
 public:
@@ -9,4 +10,7 @@ public:
         const QModelIndex &index) const override;
     QSize sizeHint(const QStyleOptionViewItem &option,
         const QModelIndex &index) const override;
+
+private:
+    MediaCache *media;
 };

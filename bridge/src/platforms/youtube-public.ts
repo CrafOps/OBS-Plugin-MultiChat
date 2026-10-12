@@ -2,10 +2,23 @@ import { EventEmitter } from 'node:events';
 import { LiveChat, type ChatItem } from 'youtube-chat-next';
 import type { ChatEngine } from '../services/engine.js';
 import type { ChatEvent, PlatformState } from '../types/protocol.js';
+import { safeMediaUrl } from '../types/media.js';
 
 export function normalizePublicYouTube(item: ChatItem): ChatEvent {
   const text = item.message.map(part => 'text' in part ? part.text : part.emojiText || part.alt).join('');
   const paid = item.superchat?.amount;
+  const parts: NonNullable<ChatEvent['messageParts']> = item.message.map(part => {
+    if ('text' in part) {
+      return { type: 'text', text: part.text };
+    }
+    const url = safeMediaUrl(part.url);
+    const alt = part.emojiText || part.alt;
+    return url ? { type: 'image', url, alt } : { type: 'text', text: alt };
+  });
+  if (paid) {
+    parts.push({ type: 'text', text: `${text ? ' · ' : ''}${paid}` });
+  }
+  const sticker = safeMediaUrl(item.superchat?.sticker?.url);
   return {
     id: item.id,
     platform: 'youtube',
@@ -15,12 +28,14 @@ export function normalizePublicYouTube(item: ChatItem): ChatEvent {
       id: item.author.channelId,
       username: item.author.name,
       displayName: item.author.name,
-      avatarUrl: item.author.thumbnail?.url || undefined,
+      avatarUrl: safeMediaUrl(item.author.thumbnail?.url),
       badges: [item.isOwner ? 'Owner' : '', item.isModerator ? 'Moderator' : '',
         item.isMembership ? 'Member' : '', item.isVerified ? 'Verified' : ''].filter(Boolean)
     },
     // The library supplies a formatted purchase string; do not guess currency or amount.
-    message: paid ? `${text}${text ? ' · ' : ''}${paid}` : text
+    message: paid ? `${text}${text ? ' · ' : ''}${paid}` : text,
+    messageParts: parts.slice(0, 128),
+    media: sticker ? { imageUrl: sticker } : undefined
   };
 }
 

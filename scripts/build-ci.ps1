@@ -118,10 +118,24 @@ if (-not (Test-Path -LiteralPath $websocketConfig)) {
 
 & cmake -S (Join-Path $projectRoot 'native') -B $nativeBuild -G $generator -A x64 `
     "-DCMAKE_PREFIX_PATH=$sdkPrefix;$qtPrefix;$dependencyPrefixes" `
-    "-DUNIFIED_CHAT_EXPECTED_QT=$expectedQt"
+    "-DUNIFIED_CHAT_EXPECTED_QT=$expectedQt" -DUNIFIED_CHAT_BUILD_UI_TESTS=ON
 Assert-NativeSuccess 'Plugin configuration'
 & cmake --build $nativeBuild --config $Configuration --parallel 4
 Assert-NativeSuccess 'Plugin build'
+$savedRuntimePath = $env:PATH
+$savedPluginPath = $env:QT_PLUGIN_PATH
+$savedQtPlatform = $env:QT_QPA_PLATFORM
+try {
+    $env:PATH = "$(Join-Path $qtPrefix 'bin');$savedRuntimePath"
+    $env:QT_PLUGIN_PATH = Join-Path $qtPrefix 'plugins'
+    $env:QT_QPA_PLATFORM = 'offscreen'
+    & ctest --test-dir $nativeBuild -C $Configuration --output-on-failure
+    Assert-NativeSuccess 'Native media and card layout checks'
+} finally {
+    $env:PATH = $savedRuntimePath
+    $env:QT_PLUGIN_PATH = $savedPluginPath
+    $env:QT_QPA_PLATFORM = $savedQtPlatform
+}
 & cmake --install $nativeBuild --config $Configuration --prefix $stage
 Assert-NativeSuccess 'Plugin staging'
 & (Join-Path $PSScriptRoot 'package.ps1') -Configuration $Configuration -WithoutTikTok:$WithoutTikTok
@@ -137,6 +151,29 @@ if (-not (Test-Path -LiteralPath $websocketDll)) {
 $runtimeDirectory = Join-Path $stage 'bin/64bit'
 New-Item -ItemType Directory -Force -Path $runtimeDirectory | Out-Null
 Copy-Item -LiteralPath $websocketDll -Destination $runtimeDirectory
+
+# Media uses Qt Concurrent and matching image codecs; OBS supplies Core/Gui/Network.
+$concurrentDll = Join-Path $qtPrefix "bin/Qt6Concurrent$qtSuffix.dll"
+if (-not (Test-Path -LiteralPath $concurrentDll)) {
+    throw "Matching Qt Concurrent runtime is missing: $concurrentDll"
+}
+Copy-Item -LiteralPath $concurrentDll -Destination $runtimeDirectory
+$codecDestination = Join-Path $runtimeDirectory 'imageformats'
+New-Item -ItemType Directory -Force -Path $codecDestination | Out-Null
+foreach ($codecName in @('qgif', 'qjpeg', 'qwebp')) {
+    $codec = Join-Path $qtPrefix "plugins/imageformats/$codecName$qtSuffix.dll"
+    if (Test-Path -LiteralPath $codec) {
+        Copy-Item -LiteralPath $codec -Destination $codecDestination
+    }
+}
+$tlsDestination = Join-Path $runtimeDirectory 'tls'
+New-Item -ItemType Directory -Force -Path $tlsDestination | Out-Null
+foreach ($backendName in @('qschannelbackend', 'qcertonlybackend')) {
+    $backend = Join-Path $qtPrefix "plugins/tls/$backendName$qtSuffix.dll"
+    if (Test-Path -LiteralPath $backend) {
+        Copy-Item -LiteralPath $backend -Destination $tlsDestination
+    }
+}
 
 $manifest = [ordered]@{
     pluginVersion = '0.1.0'

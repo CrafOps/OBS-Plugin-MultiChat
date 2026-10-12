@@ -176,8 +176,10 @@ ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
     tiktokStatus = new QLabel("● TikTok");
     youtubeStatus->setObjectName("muted");
     tiktokStatus->setObjectName("muted");
-    youtubeStatus->setWordWrap(true);
-    tiktokStatus->setWordWrap(true);
+    youtubeStatus->setWordWrap(false);
+    tiktokStatus->setWordWrap(false);
+    youtubeStatus->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    tiktokStatus->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     connections->addWidget(youtubeStatus);
     connections->addWidget(tiktokStatus);
     connections->addStretch();
@@ -528,7 +530,10 @@ void ChatDock::receive(const QJsonObject &message)
             const auto status = state.value("status").toString();
             const auto color = status == "connected" ? "#64d7b0"
                 : status == "connecting" ? "#f5cb79" : status == "error" ? "#ff828e" : "#929db3";
-            label->setText(QString("● %1 · %2").arg(name, status));
+            const auto tag = status == "connected" ? "LIVE"
+                : status == "connecting" ? "…" : status == "error" ? "ERROR" : "OFF";
+            label->setText(QString("● %1 · %2").arg(name, tag));
+            label->setToolTip(QString("%1 · %2\n%3").arg(name, status, state.value("detail").toString()));
             label->setStyleSheet(QString("color: %1; font-size: 10px;").arg(color));
         };
         updateStatus(youtubeStatus, "YouTube", youtube);

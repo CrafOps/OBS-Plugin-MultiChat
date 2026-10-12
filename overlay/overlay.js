@@ -9,6 +9,24 @@ let retry = 1000;
 const seen = new Set();
 const timers = new Map();
 
+function mediaImage(url, alt, className) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') {
+      return document.createTextNode(alt);
+    }
+  } catch {
+    return document.createTextNode(alt);
+  }
+  const image = document.createElement('img');
+  image.src = url;
+  image.alt = alt;
+  image.className = className;
+  image.referrerPolicy = 'no-referrer';
+  image.onerror = () => image.replaceWith(document.createTextNode(alt));
+  return image;
+}
+
 function remove(element) {
   clearTimeout(timers.get(element));
   timers.delete(element);
@@ -37,9 +55,21 @@ function display(event) {
   const author = document.createElement('span');
   author.className = 'author';
   author.textContent = `${platform === 'youtube' ? 'YouTube' : 'TikTok'} · ${event.user.displayName}`;
+  if (event.user.avatarUrl) {
+    author.prepend(mediaImage(event.user.avatarUrl, '', 'avatar'));
+  }
   const body = document.createElement('span');
-  body.textContent = event.message ?? '';
+  if (event.messageParts?.length) {
+    for (const part of event.messageParts) {
+      body.append(part.type === 'image' ? mediaImage(part.url, part.alt, 'emoji') : document.createTextNode(part.text));
+    }
+  } else {
+    body.textContent = event.message ?? '';
+  }
   element.append(author, body);
+  if (event.media?.imageUrl) {
+    element.append(mediaImage(event.media.imageUrl, 'Gift', 'gift-art'));
+  }
   if (event.monetaryEvent) {
     const money = document.createElement('div');
     const value = event.monetaryEvent;

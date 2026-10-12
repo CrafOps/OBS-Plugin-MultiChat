@@ -1,5 +1,12 @@
 import { z } from 'zod';
 import { youtubeVideoId } from './youtube-target.js';
+import { safeMediaUrl } from './media.js';
+
+const mediaUrl = z.string().max(4096).refine(value => safeMediaUrl(value) !== undefined, 'Unsupported media URL');
+export const messagePartSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('text'), text: z.string().max(4000) }),
+  z.object({ type: z.literal('image'), url: mediaUrl, alt: z.string().max(256) })
+]);
 
 export const eventSchema = z.object({
   id: z.string().min(1).max(256),
@@ -13,6 +20,8 @@ export const eventSchema = z.object({
     badges: z.array(z.string().max(80)).max(10).optional()
   }),
   message: z.string().max(4000).optional(),
+  messageParts: z.array(messagePartSchema).max(128).optional(),
+  media: z.object({ imageUrl: mediaUrl }).optional(),
   timestamp: z.number().finite().nonnegative(),
   monetaryEvent: z.object({
     amount: z.number().finite().optional(),

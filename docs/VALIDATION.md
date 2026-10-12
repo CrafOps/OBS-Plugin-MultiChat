@@ -1,5 +1,12 @@
 # Local validation record
 
+## Media update
+
+Strict TypeScript compilation and seventeen tests passed. New tests verify image
+URL restrictions, TikTok avatar/emote/gift metadata and YouTube avatar/emoji/sticker
+preservation. Overlay JavaScript and CI PowerShell syntax checks pass. Native
+UI/media checks were added to CI but cannot be run locally without the SDK.
+
 ## Public YouTube reader without supplied keys
 
 Added `youtube-chat-next` 3.1.0 with a pinned dependency and updated lockfile.

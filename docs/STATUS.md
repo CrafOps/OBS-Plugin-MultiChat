@@ -18,7 +18,7 @@
 
 ## Partial or deferred requirements
 
-- Native avatar thumbnails and graphic platform icons are not implemented; the dock shows textual platform labels and user badges. This avoids network image downloads in the first native implementation.
+- Native profiles, image emojis and gift icons now have an asynchronous cached renderer. Animated assets depend on supplied URLs and supported GIF/WebP codecs; full-screen platform gift effects are not implemented. Platform indicators remain colored text.
 - Only the dark theme is available; theme switching and notification preferences are not implemented.
 - Overlay layout/custom CSS are customizable by editing `overlay.css` or using OBS Browser Source custom CSS, not a built-in theme editor.
 - The dock provides YouTube-only reply input because TikTok has no supported reply method here; it has no redundant platform reply selector.

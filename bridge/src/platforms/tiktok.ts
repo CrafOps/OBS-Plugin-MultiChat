@@ -3,6 +3,9 @@ import { EventEmitter } from 'node:events';
 import type { ChatEngine } from '../services/engine.js';
 import type { ChatEvent, PlatformState } from '../types/protocol.js';
 import type { LiveConnector } from './connector.js';
+import { safeMediaUrl } from '../types/media.js';
+
+type TikTokImage = { urlList?: string[] };
 
 type TikTokData = {
   msgId?: string;
@@ -13,9 +16,10 @@ type TikTokData = {
   repeatEnd?: boolean | number;
   giftType?: number;
   giftId?: number | string;
-  gift?: { name?: string; type?: number };
+  gift?: { name?: string; type?: number; image?: TikTokImage; icon?: TikTokImage; previewImage?: TikTokImage };
   giftName?: string;
-  extendedGiftInfo?: { name?: string };
+  extendedGiftInfo?: { name?: string; image?: TikTokImage };
+  emotes?: { index: number; emote?: { image?: TikTokImage } }[];
   user?: { id?: string; userId?: string; uniqueId?: string; nickname?: string;
     displayId?: string; profilePictureUrl?: string; avatarThumb?: { urlList?: string[] } };
 };
@@ -44,6 +48,27 @@ export function tiktokErrorDetail(error: unknown): string {
 }
 
 export function normalizeTikTok(type: ChatEvent['type'], data: TikTokData): ChatEvent {
+  const text = data.content ?? data.comment ?? (type === 'gift' ? data.gift?.name ?? data.giftName
+    ?? data.extendedGiftInfo?.name ?? `Gift ${data.giftId ?? ''}` : type);
+  const parts: NonNullable<ChatEvent['messageParts']> = [];
+  let offset = 0;
+  for (const emote of [...(data.emotes ?? [])].sort((a, b) => a.index - b.index).slice(0, 40)) {
+    const url = safeMediaUrl(emote.emote?.image?.urlList?.[0]);
+    if (!url || !Number.isInteger(emote.index) || emote.index < offset || emote.index > text.length) {
+      continue;
+    }
+    if (emote.index > offset) {
+      parts.push({ type: 'text', text: text.slice(offset, emote.index) });
+    }
+    parts.push({ type: 'image', url, alt: 'TikTok emote' });
+    offset = emote.index;
+  }
+  if (offset < text.length) {
+    parts.push({ type: 'text', text: text.slice(offset) });
+  }
+  const giftImage = type === 'gift' ? safeMediaUrl(data.gift?.image?.urlList?.[0]
+    ?? data.gift?.icon?.urlList?.[0] ?? data.gift?.previewImage?.urlList?.[0]
+    ?? data.extendedGiftInfo?.image?.urlList?.[0]) : undefined;
   return {
     id: String(data.common?.msgId ?? data.msgId ?? randomUUID()),
     platform: 'tiktok',
@@ -53,10 +78,11 @@ export function normalizeTikTok(type: ChatEvent['type'], data: TikTokData): Chat
       id: String(data.user?.id ?? data.user?.userId ?? data.user?.uniqueId ?? ''),
       username: data.user?.uniqueId ?? data.user?.displayId ?? '',
       displayName: data.user?.nickname ?? data.user?.uniqueId ?? 'TikTok viewer',
-      avatarUrl: data.user?.profilePictureUrl ?? data.user?.avatarThumb?.urlList?.[0]
+      avatarUrl: safeMediaUrl(data.user?.profilePictureUrl ?? data.user?.avatarThumb?.urlList?.[0])
     },
-    message: data.content ?? data.comment ?? (type === 'gift' ? data.gift?.name ?? data.giftName
-      ?? data.extendedGiftInfo?.name ?? `Gift ${data.giftId ?? ''}` : type),
+    message: text,
+    messageParts: parts.length ? parts : undefined,
+    media: giftImage ? { imageUrl: giftImage } : undefined,
     monetaryEvent: type === 'gift' ? {
       giftName: data.gift?.name ?? data.giftName ?? data.extendedGiftInfo?.name,
       quantity: data.repeatCount ?? 1
