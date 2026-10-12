@@ -8,9 +8,10 @@
 | YouTube OAuth | System browser, random loopback callback, state, PKCE, DPAPI, token refresh | DPAPI tested; real Google consent/refresh untested |
 | YouTube LIVE | Channel, active/latest discovery, manual selection, interval-aware polling, paid/member normalization, reply | Source compiled; real live/API/quota tests outstanding |
 | YouTube LIVE ID / URL | API-key read-only selection via videos.list, no OAuth required, ended-chat guard and replies disabled | Parser/status/reply guard tests; real API-key LIVE test and new DLL build outstanding |
+| Public YouTube without supplied keys | Unofficial public web reader for pasted LIVE targets, messages/paid highlights, no sending | Live library probe received messages; adapter normalization and lifecycle tests; native rendering remains untested |
 | TikTok | Optional username connector, chat/gift/like/follow/join, final gift totals, backoff, account switching | Adapter compiled; no actual LIVE session tested |
 | TikTok login / reply | Unavailable | Login Kit does not establish requested LIVE permissions; no undocumented sending used |
-| Native UI | Accounts/status, plain timeline, badges/timestamps, paid highlights, platform/search filters, autoscroll, clear, reply state, settings | Source only; no screenshot or interaction validation |
+| Native UI | Dark card layout, painted chat cards/initials, status chips, badges/timestamps, paid highlights, filters, empty states, collapsible account options and grouped settings | Source only; refreshed native UI requires DLL rebuild and visual validation in OBS |
 | Overlay | Transparent local page, read-only WebSocket, badges, paid highlights, entry/fade animations, bounded visible items | HTTP/security smoke tests; actual OBS Browser Source untested |
 | Packaging | Build/package scripts and instructions | Refuses staging without DLL; no compiled release supplied |
 | GitHub Actions | Windows runner, matching OBS source SDK build, Qt version gate, WebSockets runtime, bridge tests and artifacts | Workflow/script syntax checked locally; cloud run not executed |

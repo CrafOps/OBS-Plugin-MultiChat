@@ -88,6 +88,13 @@ test('local bridge authenticates controls, restricts overlay and shuts down', { 
     assert.equal(reply.ok, false);
     assert.equal(reply.requestId, 'no-auth');
 
+    const invalidResult = packet(control);
+    control.send(JSON.stringify({ kind: 'settings', requestId: 'invalid-settings',
+      settings: { tiktokUsername: 'invalid handle' } }));
+    const invalid = await invalidResult;
+    assert.equal(invalid.ok, false);
+    assert.match(String(invalid.error), /settings.tiktokUsername/);
+
     const closed = once(overlay, 'close');
     overlay.send(JSON.stringify({ kind: 'login' }));
     assert.equal((await closed)[0], 1008);

@@ -127,8 +127,11 @@ wss.on('connection', (socket: WebSocket, _request: unknown, role: 'control' | 'o
     let command: z.infer<typeof commandSchema>;
     try {
       command = commandSchema.parse(JSON.parse(raw.toString()));
-    } catch {
-      send(socket, { kind: 'result', ok: false, error: 'Invalid command' });
+    } catch (error) {
+      const detail = error instanceof z.ZodError
+        ? error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).slice(0, 3).join('; ')
+        : 'Malformed JSON command';
+      send(socket, { kind: 'result', ok: false, error: `Invalid command: ${detail}` });
       return;
     }
     commands = commands.then(async () => {

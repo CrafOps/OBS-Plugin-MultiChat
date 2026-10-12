@@ -15,7 +15,7 @@ export function youtubeVideoId(input: string): string | undefined {
     if (host === 'youtu.be' || host === 'www.youtu.be') {
       candidate = url.pathname.split('/')[1];
     } else if (['youtube.com', 'www.youtube.com', 'm.youtube.com'].includes(host)) {
-      candidate = url.pathname === '/watch' ? url.searchParams.get('v')
+      candidate = ['/watch', '/live_chat', '/live_chat_replay'].includes(url.pathname) ? url.searchParams.get('v')
         : /^\/(live|embed|shorts)\/([^/]+)\/?$/.exec(url.pathname)?.[2];
     }
     return candidate && videoIdPattern.test(candidate) ? candidate : undefined;

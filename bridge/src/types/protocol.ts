@@ -32,7 +32,9 @@ export type PlatformState = {
 };
 
 export const settingsSchema = z.object({
-  tiktokUsername: z.string().regex(/^[\w.]{0,64}$/).default(''),
+  tiktokUsername: z.string().trim().transform(value => value.replace(/^@/, ''))
+    .pipe(z.string().regex(/^[\w.]{0,64}$/, 'TikTok username must contain only letters, numbers, underscores or dots'))
+    .default(''),
   tiktokEnabled: z.boolean().default(false),
   autoDetect: z.boolean().default(true),
   autoReconnect: z.boolean().default(true),

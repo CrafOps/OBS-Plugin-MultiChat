@@ -7,3 +7,4 @@ package/
 *.log
 .test-data-*/
 .ci/
+updates/

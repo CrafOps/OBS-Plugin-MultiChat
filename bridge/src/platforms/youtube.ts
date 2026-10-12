@@ -8,6 +8,7 @@ import type { Store } from '../storage/store.js';
 import type { ChatEngine } from '../services/engine.js';
 import type { PlatformState, ChatEvent } from '../types/protocol.js';
 import { youtubeVideoId } from '../types/youtube-target.js';
+import { PublicYouTubeConnector } from './youtube-public.js';
 
 export function manualLiveChat(video: youtube_v3.Schema$Video | undefined): {
   chatId?: string;
@@ -77,6 +78,7 @@ export class YouTubeConnector {
   private auth;
   private api;
   private readApi;
+  private publicChat;
   private callback?: Server;
   private callbackTimer?: NodeJS.Timeout;
   private timer?: NodeJS.Timeout;
@@ -92,6 +94,7 @@ export class YouTubeConnector {
     this.auth = new google.auth.OAuth2(process.env.YOUTUBE_CLIENT_ID, process.env.YOUTUBE_CLIENT_SECRET);
     this.api = google.youtube({ version: 'v3', auth: this.auth });
     this.readApi = this.api;
+    this.publicChat = new PublicYouTubeConnector(engine, state => this.update(state));
     this.auth.on('tokens', tokens => {
       const merged = { ...this.auth.credentials, ...tokens };
       this.saveQueue = this.saveQueue.then(() => this.store.saveCredentials(merged)).catch(() => {
@@ -181,6 +184,17 @@ export class YouTubeConnector {
     const target = this.engine.settings.youtubeLiveUrl;
     const authenticated = Boolean(this.auth.credentials.access_token || this.auth.credentials.refresh_token);
     const key = process.env.YOUTUBE_API_KEY?.trim();
+    if (target && !key) {
+      this.discovery = true;
+      this.stopPolling();
+      this.broadcasts = [];
+      try {
+        await this.publicChat.connect(youtubeVideoId(target)!);
+      } finally {
+        this.discovery = false;
+      }
+      return;
+    }
     if (!authenticated && !(target && key)) {
       this.stopPolling();
       this.update({ status: 'disconnected', canReply: false,
@@ -323,6 +337,7 @@ export class YouTubeConnector {
   }
 
   private stopPolling(): void {
+    this.publicChat.stop();
     this.generation += 1;
     clearTimeout(this.timer);
     this.chatId = undefined;

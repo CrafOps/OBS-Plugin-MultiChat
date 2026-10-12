@@ -2,6 +2,14 @@
 
 ## YouTube
 
+### Public read-only without an API key (default for a pasted LIVE ID)
+
+Enter a public LIVE ID or URL and leave the API Key field empty. The bridge uses
+the unofficial `youtube-chat-next` reader without OAuth. It normalizes messages
+into the same timeline and always disables sending. See YOUTUBE_NO_KEY.md for
+the update package and caveats. Entering an API key opts back into the official
+API-key reader; clearing the LIVE target returns to OAuth account discovery.
+
 ### Read-only by LIVE ID or URL (no OAuth login)
 
 1. Open [Google Cloud Console](https://console.cloud.google.com/), create/select a project, and enable **YouTube Data API v3**.
@@ -29,7 +37,7 @@ Polling honors YouTube's returned `pollingIntervalMillis`. This implementation u
 
 ## TikTok
 
-No developer credentials are required for the optional unofficial username connector. Enable it deliberately in Accounts, enter a username without `@`, save, and refresh. Only public LIVE events supported by the upstream connector can arrive. Creator offline, geographic restrictions, signing limits, upstream changes, and TikTok enforcement may prevent connection.
+No developer credentials are required for the optional unofficial username connector. Enable it deliberately in Accounts, enter a username with or without `@`, save, and refresh. Only public LIVE events supported by the upstream connector can arrive. Creator offline, geographic restrictions, signing limits, upstream changes, and TikTok enforcement may prevent connection. Optional gift catalog fetching is disabled so that catalog request failures do not block chat connectivity. Inline gift names/counts are still normalized when present.
 
 TikTok Login Kit offers authorized identity scopes, not a general public entitlement to LIVE chat reading or sending. Login Kit is therefore not implemented: it would not unlock the requested LIVE features with the available documented scopes. There is no password capture, cookie import, CAPTCHA bypass, or account automation. The `LiveConnector` boundary allows a future authorized official implementation to replace the username connector. Replies remain disabled.
 

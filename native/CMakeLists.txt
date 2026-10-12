@@ -29,6 +29,8 @@ add_library(obs-unified-chat MODULE
   src/plugin-main.cpp
   src/dock/chat-dock.cpp
   src/dock/chat-dock.hpp
+  src/dock/chat-delegate.cpp
+  src/dock/chat-delegate.hpp
   src/bridge/bridge-client.cpp
   src/bridge/bridge-client.hpp
 )
@@ -37,7 +39,7 @@ target_link_libraries(obs-unified-chat PRIVATE
   Qt6::Widgets Qt6::Network Qt6::WebSockets
 )
 target_compile_definitions(obs-unified-chat PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
-target_compile_options(obs-unified-chat PRIVATE /W4 /permissive-)
+target_compile_options(obs-unified-chat PRIVATE /W4 /permissive- /utf-8)
 set_target_properties(obs-unified-chat PROPERTIES PREFIX "")
 install(TARGETS obs-unified-chat LIBRARY DESTINATION obs-plugins/64bit
   RUNTIME DESTINATION obs-plugins/64bit)

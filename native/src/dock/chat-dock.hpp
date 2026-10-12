@@ -31,6 +31,10 @@ private:
     QLabel *statusLabel;
     QLabel *youtubeLabel;
     QLabel *tiktokLabel;
+    QLabel *youtubeStatus;
+    QLabel *tiktokStatus;
+    QLabel *emptyState;
+    QLabel *messageCount;
     QLineEdit *username;
     QLineEdit *search;
     QLineEdit *reply;

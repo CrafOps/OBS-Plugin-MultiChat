@@ -15,64 +15,253 @@
 #include <QSettings>
 #include <QColor>
 #include <algorithm>
+#include <QGroupBox>
+#include <QFrame>
+#include <QFont>
+#include <QFileDialog>
+#include "chat-delegate.hpp"
 
 ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
 {
-    setMinimumSize(280, 320);
-    setStyleSheet(
-        "QWidget { background: #17191f; color: #e6e8ef; font-family: 'Segoe UI', 'Tahoma'; }"
-        "QLineEdit, QComboBox, QSpinBox, QListWidget { background: #22252e; border: 1px solid #383d49; border-radius: 5px; padding: 5px; }"
-        "QPushButton { background: #303747; border: 1px solid #465168; border-radius: 5px; padding: 6px; }"
-        "QPushButton:hover { background: #404d66; }"
-        "QPushButton:disabled { color: #777d8b; }"
-        "QListWidget::item { padding: 6px; border-bottom: 1px solid #30343f; }"
-    );
+    setObjectName("unifiedChat");
+    setMinimumSize(300, 360);
+    auto interfaceFont = font();
+    interfaceFont.setPointSize(10);
+    setFont(interfaceFont);
+    setStyleSheet(R"(
+        QWidget {
+            color: #e5eaf5;
+            font-family: 'Segoe UI', 'Tahoma';
+        }
+        QWidget#unifiedChat, QScrollArea, QScrollArea > QWidget > QWidget {
+            background: #131720;
+        }
+        QLabel {
+            background: transparent;
+        }
+        QLabel#brand {
+            font-size: 19px;
+            font-weight: 700;
+            color: #f4f6fb;
+        }
+        QLabel#muted, QLabel#status {
+            color: #929db3;
+            font-size: 11px;
+        }
+        QLabel#empty {
+            color: #929db3;
+            padding: 24px 10px;
+            font-size: 13px;
+        }
+        QGroupBox {
+            background: #1a1f2b;
+            border: 1px solid #2e3546;
+            border-radius: 10px;
+            margin-top: 14px;
+            padding: 14px 10px 10px;
+            font-weight: 600;
+        }
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            left: 14px;
+            padding: 0 5px;
+            color: #cdd6ea;
+        }
+        QTabWidget::pane {
+            border: none;
+            background: transparent;
+        }
+        QTabBar::tab {
+            background: transparent;
+            color: #929db3;
+            border-bottom: 2px solid transparent;
+            padding: 10px 14px;
+            margin-right: 4px;
+        }
+        QTabBar::tab:selected {
+            color: #e9eeff;
+            border-bottom: 2px solid #899dff;
+        }
+        QTabBar::tab:hover {
+            color: #e9eeff;
+            background: #202636;
+        }
+        QLineEdit, QComboBox, QSpinBox {
+            background: #131824;
+            border: 1px solid #343d52;
+            border-radius: 7px;
+            padding: 8px;
+            selection-background-color: #5064a0;
+        }
+        QLineEdit:focus, QComboBox:focus, QSpinBox:focus {
+            border-color: #899dff;
+        }
+        QComboBox::drop-down {
+            border: none;
+            width: 22px;
+        }
+        QPushButton {
+            background: #252d3e;
+            border: 1px solid #3a455d;
+            border-radius: 7px;
+            padding: 8px 12px;
+            font-weight: 600;
+        }
+        QPushButton:hover {
+            background: #333f58;
+            border-color: #67799f;
+        }
+        QPushButton:pressed {
+            background: #1e2638;
+        }
+        QPushButton#primary {
+            background: #8599f5;
+            color: #111626;
+            border: 1px solid #9aacff;
+        }
+        QPushButton#primary:hover {
+            background: #a0b0ff;
+        }
+        QPushButton:disabled, QLineEdit:disabled {
+            color: #68748c;
+        }
+        QCheckBox {
+            spacing: 8px;
+            padding: 4px 0;
+        }
+        QCheckBox::indicator {
+            width: 15px;
+            height: 15px;
+            border: 1px solid #56647f;
+            border-radius: 4px;
+            background: #131824;
+        }
+        QCheckBox::indicator:checked {
+            background: #8599f5;
+            border-color: #a2b2ff;
+        }
+        QListWidget {
+            background: #131720;
+            border: none;
+            outline: none;
+        }
+        QScrollArea {
+            border: none;
+        }
+        QScrollBar:vertical {
+            background: transparent;
+            width: 7px;
+            margin: 0;
+        }
+        QScrollBar::handle:vertical {
+            background: #3a465e;
+            border-radius: 3px;
+            min-height: 30px;
+        }
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+            height: 0;
+        }
+        QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+            background: transparent;
+        }
+    )");
     auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(8, 8, 8, 8);
+    layout->setContentsMargins(12, 14, 12, 10);
+    layout->setSpacing(10);
+    auto *brand = new QLabel("MULTICHAT");
+    brand->setObjectName("brand");
+    layout->addWidget(brand);
+    auto *connections = new QHBoxLayout;
+    youtubeStatus = new QLabel("● YouTube");
+    tiktokStatus = new QLabel("● TikTok");
+    youtubeStatus->setObjectName("muted");
+    tiktokStatus->setObjectName("muted");
+    youtubeStatus->setWordWrap(true);
+    tiktokStatus->setWordWrap(true);
+    connections->addWidget(youtubeStatus);
+    connections->addWidget(tiktokStatus);
+    connections->addStretch();
+    layout->addLayout(connections);
     statusLabel = new QLabel("Starting local bridge");
     statusLabel->setWordWrap(true);
-    layout->addWidget(statusLabel);
+    statusLabel->setTextFormat(Qt::PlainText);
+    statusLabel->setObjectName("status");
     auto *tabs = new QTabWidget;
-    layout->addWidget(tabs);
+    layout->addWidget(tabs, 1);
+    layout->addWidget(statusLabel);
 
     auto *accounts = new QWidget;
     auto *accountLayout = new QVBoxLayout(accounts);
-    youtubeLabel = new QLabel("YouTube: login required");
+    accountLayout->setContentsMargins(0, 8, 0, 0);
+    accountLayout->setSpacing(14);
+    auto *youtubeGroup = new QGroupBox("YouTube");
+    auto *youtubeLayout = new QVBoxLayout(youtubeGroup);
+    youtubeLayout->setSpacing(9);
+    accountLayout->addWidget(youtubeGroup);
+    youtubeLabel = new QLabel("Paste a LIVE link to get started");
     youtubeLabel->setWordWrap(true);
-    accountLayout->addWidget(youtubeLabel);
+    youtubeLabel->setTextFormat(Qt::PlainText);
+    youtubeLabel->setObjectName("muted");
+    youtubeLayout->addWidget(youtubeLabel);
     auto *login = new QPushButton("Login with YouTube");
     auto *logout = new QPushButton("Logout YouTube");
-    accountLayout->addWidget(login);
-    accountLayout->addWidget(logout);
     broadcasts = new QComboBox;
-    accountLayout->addWidget(broadcasts);
     youtubeLiveUrl = new QLineEdit;
     youtubeLiveUrl->setMaxLength(2048);
     youtubeLiveUrl->setPlaceholderText("YouTube LIVE ID or URL (read-only)");
-    accountLayout->addWidget(youtubeLiveUrl);
-    auto *readOnlyHint = new QLabel("Enter a LIVE ID/URL to read chat without login using an API key. Clear to use account broadcasts.");
+    youtubeLayout->addWidget(youtubeLiveUrl);
+    auto *readOnlyHint = new QLabel("Read-only public chat · No login or API key needed");
     readOnlyHint->setWordWrap(true);
-    accountLayout->addWidget(readOnlyHint);
-    tiktokLabel = new QLabel("TikTok: unofficial username connection");
-    tiktokLabel->setWordWrap(true);
-    accountLayout->addWidget(tiktokLabel);
-    username = new QLineEdit;
-    username->setPlaceholderText("TikTok username, without @");
-    accountLayout->addWidget(username);
-    tiktokEnabled = new QCheckBox("Enable unofficial TikTok connector");
-    accountLayout->addWidget(tiktokEnabled);
-    autoDetect = new QCheckBox("Automatically detect YouTube LIVE");
+    readOnlyHint->setObjectName("muted");
+    youtubeLayout->addWidget(readOnlyHint);
+    auto *advancedAccount = new QPushButton("Account options");
+    advancedAccount->setCheckable(true);
+    youtubeLayout->addWidget(advancedAccount);
+    auto *accountOptions = new QWidget;
+    auto *optionLayout = new QVBoxLayout(accountOptions);
+    optionLayout->setContentsMargins(0, 0, 0, 0);
+    auto *loginActions = new QHBoxLayout;
+    loginActions->addWidget(login);
+    loginActions->addWidget(logout);
+    optionLayout->addLayout(loginActions);
+    optionLayout->addWidget(broadcasts);
+    autoDetect = new QCheckBox("Auto-detect my broadcasts");
     autoDetect->setChecked(true);
-    accountLayout->addWidget(autoDetect);
-    auto *applyAccounts = new QPushButton("Save accounts and connect");
-    auto *refresh = new QPushButton("Refresh LIVE sessions");
-    accountLayout->addWidget(applyAccounts);
-    accountLayout->addWidget(refresh);
+    optionLayout->addWidget(autoDetect);
+    youtubeLayout->addWidget(accountOptions);
+    accountOptions->hide();
+    connect(advancedAccount, &QPushButton::toggled, accountOptions, &QWidget::setVisible);
+    auto *tiktokGroup = new QGroupBox("TikTok");
+    auto *tiktokLayout = new QVBoxLayout(tiktokGroup);
+    tiktokLayout->setSpacing(9);
+    accountLayout->addWidget(tiktokGroup);
+    tiktokLabel = new QLabel("Connect a creator who is LIVE");
+    tiktokLabel->setWordWrap(true);
+    tiktokLabel->setTextFormat(Qt::PlainText);
+    tiktokLabel->setObjectName("muted");
+    tiktokLayout->addWidget(tiktokLabel);
+    username = new QLineEdit;
+    username->setPlaceholderText("TikTok username (with or without @)");
+    tiktokLayout->addWidget(username);
+    tiktokEnabled = new QCheckBox("Enable TikTok chat (unofficial)");
+    tiktokLayout->addWidget(tiktokEnabled);
+    auto *applyAccounts = new QPushButton("Connect sources");
+    applyAccounts->setObjectName("primary");
+    auto *refresh = new QPushButton("Refresh");
+    auto *accountActions = new QHBoxLayout;
+    accountActions->addWidget(applyAccounts, 1);
+    accountActions->addWidget(refresh);
+    accountLayout->addLayout(accountActions);
     accountLayout->addStretch();
-    tabs->addTab(accounts, "Accounts");
+    auto *accountScroll = new QScrollArea;
+    accountScroll->setWidgetResizable(true);
+    accountScroll->setWidget(accounts);
+    tabs->addTab(accountScroll, "Accounts");
 
     auto *chat = new QWidget;
     auto *chatLayout = new QVBoxLayout(chat);
+    chatLayout->setContentsMargins(0, 10, 0, 0);
+    chatLayout->setSpacing(8);
     auto *filters = new QHBoxLayout;
     search = new QLineEdit;
     search->setPlaceholderText("Search messages");
@@ -84,13 +273,25 @@ ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
     timeline = new QListWidget;
     timeline->setWordWrap(true);
     timeline->setSelectionMode(QAbstractItemView::NoSelection);
+    timeline->setItemDelegate(new ChatDelegate(timeline));
+    timeline->setResizeMode(QListView::Adjust);
+    timeline->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    timeline->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    emptyState = new QLabel("Your chat, in one place\n\nConnect YouTube or TikTok in Accounts.\nNew messages will appear here.");
+    emptyState->setObjectName("empty");
+    emptyState->setAlignment(Qt::AlignCenter);
+    emptyState->setWordWrap(true);
+    chatLayout->addWidget(emptyState);
     chatLayout->addWidget(timeline, 1);
     auto *tools = new QHBoxLayout;
     autoScroll = new QCheckBox("Auto-scroll");
     autoScroll->setChecked(true);
     auto *clear = new QPushButton("Clear");
     tools->addWidget(autoScroll);
+    messageCount = new QLabel("0 messages");
+    messageCount->setObjectName("muted");
     tools->addStretch();
+    tools->addWidget(messageCount);
     tools->addWidget(clear);
     chatLayout->addLayout(tools);
     auto *replyLayout = new QHBoxLayout;
@@ -99,14 +300,24 @@ ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
     reply->setPlaceholderText("Reply to YouTube LIVE · Enter to send");
     sendButton = new QPushButton("Send");
     sendButton->setEnabled(false);
+    reply->hide();
+    sendButton->hide();
     replyLayout->addWidget(reply, 1);
     replyLayout->addWidget(sendButton);
     chatLayout->addLayout(replyLayout);
     tabs->addTab(chat, "Chat");
+    tabs->setCurrentWidget(chat);
 
     QSettings local("OBSUnifiedChat", "NativeDock");
     auto *settingsWidget = new QWidget;
-    auto *form = new QFormLayout(settingsWidget);
+    auto *settingsLayout = new QVBoxLayout(settingsWidget);
+    settingsLayout->setContentsMargins(0, 8, 0, 0);
+    settingsLayout->setSpacing(14);
+    auto *runtimeGroup = new QGroupBox("Workspace & startup");
+    auto *form = new QFormLayout(runtimeGroup);
+    form->setRowWrapPolicy(QFormLayout::WrapAllRows);
+    form->setVerticalSpacing(9);
+    settingsLayout->addWidget(runtimeGroup);
     rootPath = new QLineEdit(local.value("bridgeRoot").toString());
     nodePath = new QLineEdit(local.value("nodePath", "C:/Program Files/nodejs/node.exe").toString());
     clientId = new QLineEdit(local.value("youtubeClientId").toString());
@@ -114,17 +325,38 @@ ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
     clientSecret->setEchoMode(QLineEdit::Password);
     apiKey = new QLineEdit(local.value("youtubeApiKey").toString());
     apiKey->setEchoMode(QLineEdit::Password);
-    form->addRow("Package folder", rootPath);
-    form->addRow("Node executable", nodePath);
-    form->addRow("Google desktop client ID", clientId);
-    form->addRow("Desktop client secret", clientSecret);
-    form->addRow("YouTube API Key (read-only LIVE)", apiKey);
+    auto *folderRow = new QHBoxLayout;
+    auto *browseFolder = new QPushButton("Browse");
+    folderRow->addWidget(rootPath, 1);
+    folderRow->addWidget(browseFolder);
+    form->addRow("Package folder", folderRow);
+    auto *nodeRow = new QHBoxLayout;
+    auto *browseNode = new QPushButton("Browse");
+    nodeRow->addWidget(nodePath, 1);
+    nodeRow->addWidget(browseNode);
+    form->addRow("Node executable", nodeRow);
+    connect(browseFolder, &QPushButton::clicked, this, [this] {
+        const auto path = QFileDialog::getExistingDirectory(this, "Choose package folder", rootPath->text());
+        if (!path.isEmpty()) {
+            rootPath->setText(path);
+        }
+    });
+    connect(browseNode, &QPushButton::clicked, this, [this] {
+        const auto path = QFileDialog::getOpenFileName(this, "Choose Node executable", nodePath->text(), "Node executable (node.exe)");
+        if (!path.isEmpty()) {
+            nodePath->setText(path);
+        }
+    });
     startWithObs = new QCheckBox("Start bridge with OBS");
     startWithObs->setChecked(local.value("startWithObs", true).toBool());
     autoReconnect = new QCheckBox("Reconnect platform sessions");
     autoReconnect->setChecked(true);
     form->addRow(startWithObs);
     form->addRow(autoReconnect);
+    auto *displayGroup = new QGroupBox("Chat appearance");
+    auto *displayForm = new QFormLayout(displayGroup);
+    displayForm->setRowWrapPolicy(QFormLayout::WrapAllRows);
+    settingsLayout->addWidget(displayGroup);
     messageLimit = new QSpinBox;
     messageLimit->setRange(50, 2000);
     messageLimit->setValue(500);
@@ -137,19 +369,43 @@ ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
     overlaySeconds = new QSpinBox;
     overlaySeconds->setRange(5, 300);
     overlaySeconds->setValue(25);
-    form->addRow("Message limit", messageLimit);
-    form->addRow("Font size", fontSize);
-    form->addRow("Overlay messages", overlayLimit);
-    form->addRow("Overlay lifetime (seconds)", overlaySeconds);
+    displayForm->addRow("Message limit", messageLimit);
+    displayForm->addRow("Font size", fontSize);
+    auto *overlayGroup = new QGroupBox("Browser Source overlay");
+    auto *overlayForm = new QFormLayout(overlayGroup);
+    overlayForm->setRowWrapPolicy(QFormLayout::WrapAllRows);
+    settingsLayout->addWidget(overlayGroup);
+    overlayForm->addRow("Visible messages", overlayLimit);
+    overlayForm->addRow("Fade after (seconds)", overlaySeconds);
     overlayUrl = new QLineEdit;
     overlayUrl->setReadOnly(true);
-    form->addRow("Browser Source URL", overlayUrl);
+    overlayForm->addRow("Local overlay URL", overlayUrl);
     auto *copy = new QPushButton("Copy overlay URL");
-    form->addRow(copy);
+    overlayForm->addRow(copy);
+    auto *credentialToggle = new QPushButton("Optional Google API / OAuth settings");
+    credentialToggle->setCheckable(true);
+    settingsLayout->addWidget(credentialToggle);
+    auto *credentials = new QGroupBox("Google credentials · optional");
+    auto *credentialForm = new QFormLayout(credentials);
+    credentialForm->setRowWrapPolicy(QFormLayout::WrapAllRows);
+    credentialForm->addRow("Desktop client ID", clientId);
+    credentialForm->addRow("Desktop client secret", clientSecret);
+    credentialForm->addRow("API Key (official reader)", apiKey);
+    auto *credentialHint = new QLabel("Leave API Key empty for the public reader. Restart OBS after changing credentials.");
+    credentialHint->setWordWrap(true);
+    credentialHint->setObjectName("muted");
+    credentialForm->addRow(credentialHint);
+    settingsLayout->addWidget(credentials);
+    credentials->hide();
+    connect(credentialToggle, &QPushButton::toggled, credentials, &QWidget::setVisible);
     auto *save = new QPushButton("Save settings");
     auto *start = new QPushButton("Start bridge");
-    form->addRow(save);
-    form->addRow(start);
+    save->setObjectName("primary");
+    auto *settingsActions = new QHBoxLayout;
+    settingsActions->addWidget(save, 1);
+    settingsActions->addWidget(start);
+    settingsLayout->addLayout(settingsActions);
+    settingsLayout->addStretch();
     auto *scroll = new QScrollArea;
     scroll->setWidgetResizable(true);
     scroll->setWidget(settingsWidget);
@@ -260,15 +516,27 @@ void ChatDock::receive(const QJsonObject &message)
         addEvent(message.value("event").toObject());
     } else if (kind == "clear") {
         timeline->clear();
+        filter();
     } else if (kind == "state") {
         const auto youtube = message.value("youtube").toObject();
         const auto tiktok = message.value("tiktok").toObject();
-        youtubeLabel->setText(QString("YouTube · %1\n%2\n%3")
-            .arg(youtube.value("account").toString(), youtube.value("detail").toString(), youtube.value("title").toString()));
-        tiktokLabel->setText(QString("TikTok · %1\n%2")
+        youtubeLabel->setText(QString("%1\n%2\n%3")
+            .arg(youtube.value("account").toString(), youtube.value("detail").toString(), youtube.value("title").toString()).trimmed());
+        tiktokLabel->setText(QString("%1\n%2")
             .arg(tiktok.value("account").toString(), tiktok.value("detail").toString()));
+        const auto updateStatus = [](QLabel *label, const QString &name, const QJsonObject &state) {
+            const auto status = state.value("status").toString();
+            const auto color = status == "connected" ? "#64d7b0"
+                : status == "connecting" ? "#f5cb79" : status == "error" ? "#ff828e" : "#929db3";
+            label->setText(QString("● %1 · %2").arg(name, status));
+            label->setStyleSheet(QString("color: %1; font-size: 10px;").arg(color));
+        };
+        updateStatus(youtubeStatus, "YouTube", youtube);
+        updateStatus(tiktokStatus, "TikTok", tiktok);
         canReply = youtube.value("canReply").toBool();
         reply->setEnabled(canReply);
+        reply->setVisible(canReply);
+        sendButton->setVisible(canReply);
         sendButton->setEnabled(bridgeConnected && canReply && pendingReply.isEmpty());
         const auto selected = settings.value("youtubeBroadcastId").toString();
         QSignalBlocker blocker(broadcasts);
@@ -324,6 +592,7 @@ void ChatDock::addEvent(const QJsonObject &event)
     auto *item = new QListWidgetItem(text);
     item->setData(Qt::UserRole, platformName);
     item->setData(Qt::UserRole + 1, timestamp);
+    item->setData(Qt::UserRole + 2, event);
     if (type == "gift" || type == "superchat") {
         item->setBackground(QColor("#363026"));
         item->setForeground(QColor("#ffe1a0"));
@@ -345,11 +614,20 @@ void ChatDock::addEvent(const QJsonObject &event)
 void ChatDock::filter()
 {
     const auto selected = platform->currentText().toLower();
+    int visible = 0;
     for (int index = 0; index < timeline->count(); ++index) {
         auto *item = timeline->item(index);
         item->setHidden((selected != "all" && item->data(Qt::UserRole).toString() != selected)
             || !item->text().contains(search->text(), Qt::CaseInsensitive));
+        if (!item->isHidden()) {
+            ++visible;
+        }
     }
+    messageCount->setText(QString("%1 messages").arg(visible));
+    emptyState->setVisible(visible == 0);
+    emptyState->setText(timeline->count() == 0
+        ? "Your chat, in one place\n\nConnect YouTube or TikTok in Accounts.\nNew messages will appear here."
+        : "No matching messages\n\nTry another filter or search.");
 }
 
 void ChatDock::shutdown()

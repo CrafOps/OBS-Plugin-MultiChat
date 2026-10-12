@@ -12,7 +12,8 @@ test('accepts video IDs and YouTube watch, live and short URLs', () => {
     ' https://www.youtube.com/watch?v=FiaU2oMI-Cg&feature=share ',
     'https://youtu.be/FiaU2oMI-Cg?si=test',
     'https://youtube.com/live/FiaU2oMI-Cg',
-    'https://m.youtube.com/watch?v=FiaU2oMI-Cg'
+    'https://m.youtube.com/watch?v=FiaU2oMI-Cg',
+    'https://www.youtube.com/live_chat?is_popout=1&v=FiaU2oMI-Cg'
   ]) {
     assert.equal(youtubeVideoId(input), 'FiaU2oMI-Cg');
   }

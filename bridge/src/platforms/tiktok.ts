@@ -20,6 +20,29 @@ type TikTokData = {
     displayId?: string; profilePictureUrl?: string; avatarThumb?: { urlList?: string[] } };
 };
 
+export function tiktokErrorDetail(error: unknown): string {
+  const wrapped = error as { exception?: unknown } | undefined;
+  const cause = wrapped?.exception ?? error;
+  const name = (cause as { name?: string; constructor?: { name?: string } } | undefined)?.constructor?.name
+    ?? (cause as { name?: string } | undefined)?.name;
+  switch (name) {
+    case 'UserOfflineError':
+      return 'TikTok creator is not currently LIVE';
+    case 'InvalidUniqueIdError':
+      return 'TikTok username is invalid';
+    case 'SignatureRateLimitError':
+      return 'TikTok signing service rate limit; waiting to reconnect';
+    case 'SignAPIError':
+    case 'SignatureMissingTokensError':
+    case 'AuthenticatedWebSocketConnectionError':
+      return 'TikTok signing service rejected the connection; unofficial connector unavailable';
+    case 'ConnectTimeoutError':
+      return 'TikTok connection timed out';
+    default:
+      return 'Unable to connect to TikTok LIVE; creator may be offline or connector blocked';
+  }
+}
+
 export function normalizeTikTok(type: ChatEvent['type'], data: TikTokData): ChatEvent {
   return {
     id: String(data.common?.msgId ?? data.msgId ?? randomUUID()),
@@ -70,7 +93,9 @@ export class TikTokConnector implements LiveConnector {
       }
       // The package's typed-emitter default import loses inherited members under NodeNext.
       // Its runtime class extends node:events EventEmitter; preserve that surface explicitly.
-      const connection = new TikTokLiveConnection(username, { enableExtendedGiftInfo: true }) as
+      // Optional gift-catalog lookup must not prevent receiving chat. Gift events
+      // still include available inline metadata without this extra request.
+      const connection = new TikTokLiveConnection(username, { enableExtendedGiftInfo: false }) as
         import('tiktok-live-connector').TikTokLiveConnection & EventEmitter;
       this.connection = connection;
       const eventTypes: [string, ChatEvent['type']][] = [
@@ -85,9 +110,9 @@ export class TikTokConnector implements LiveConnector {
           this.engine.accept(normalizeTikTok(type, data));
         });
       }
-      connection.on(ControlEvent.ERROR, () => {
+      connection.on(ControlEvent.ERROR, error => {
         if (generation === this.generation) {
-          this.update({ ...this.state, status: 'error', detail: 'TikTok connector error', canReply: false });
+          this.update({ ...this.state, status: 'error', detail: tiktokErrorDetail(error), canReply: false });
         }
       });
       connection.on(ControlEvent.DISCONNECTED, () => this.retry(username, generation, 'TikTok disconnected'));
@@ -99,8 +124,8 @@ export class TikTokConnector implements LiveConnector {
       }
       this.failures = 0;
       this.update({ status: 'connected', detail: 'Receiving unofficial TikTok LIVE events', account: username, canReply: false });
-    } catch {
-      this.retry(username, generation, 'Creator offline or unofficial connector unavailable');
+    } catch (error) {
+      this.retry(username, generation, tiktokErrorDetail(error));
     }
   }
 
