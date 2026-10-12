@@ -8,6 +8,8 @@
 #include <QMovie>
 #include <QUrl>
 #include <QSslSocket>
+#include <QMainWindow>
+#include <QDockWidget>
 #include <iostream>
 #include "../src/dock/chat-delegate.hpp"
 
@@ -15,6 +17,36 @@ int main(int argc, char **argv)
 {
     std::cerr << "Creating Qt application" << std::endl;
     QApplication application(argc, argv);
+    std::cerr << "Checking dock layout restoration" << std::endl;
+    {
+        QMainWindow previous;
+        auto *savedDock = new QDockWidget("Chat", &previous);
+        savedDock->setObjectName("obs-unified-live-chat");
+        savedDock->setWidget(new QWidget);
+        previous.addDockWidget(Qt::LeftDockWidgetArea, savedDock);
+        previous.show();
+        savedDock->show();
+        application.processEvents();
+        const auto state = previous.saveState();
+
+        QMainWindow reopened;
+        auto *restoredDock = new QDockWidget("Chat", &reopened);
+        restoredDock->setObjectName("obs-unified-live-chat");
+        restoredDock->setWidget(new QWidget);
+        reopened.addDockWidget(Qt::RightDockWidgetArea, restoredDock);
+        restoredDock->hide();
+        restoredDock->setFloating(true);
+        if (!reopened.restoreState(state) || restoredDock->isHidden() || restoredDock->isFloating()
+            || reopened.dockWidgetArea(restoredDock) != Qt::LeftDockWidgetArea) {
+            std::cerr << "Dock visibility and placement restoration failed\n";
+            return 1;
+        }
+        savedDock->hide();
+        if (!reopened.restoreState(previous.saveState()) || !restoredDock->isHidden()) {
+            std::cerr << "Intentionally hidden dock was reopened\n";
+            return 1;
+        }
+    }
     std::cerr << "Checking HTTPS" << std::endl;
     if (!QSslSocket::supportsSsl()) {
         std::cerr << "HTTPS media transport is unavailable\n";
