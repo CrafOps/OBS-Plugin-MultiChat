@@ -150,7 +150,9 @@ $savedErrorMode = [UnifiedChatBuild.NativeErrorMode]::SetErrorMode(0x8003)
 try {
     $env:PATH = (($runtimeBins | Select-Object -Unique) -join ';') + ';' + $savedRuntimePath
     $env:QT_PLUGIN_PATH = Join-Path $qtPrefix 'plugins'
-    $env:QT_QPA_PLATFORM = 'offscreen'
+    # The release's offscreen plugin stalls during QApplication initialization
+    # on hosted Windows. Native windows works without showing any test widget.
+    $env:QT_QPA_PLATFORM = 'windows'
     & ctest --test-dir $nativeBuild -C $Configuration --output-on-failure --timeout 30
     Assert-NativeSuccess 'Native media and card layout checks'
 } finally {
