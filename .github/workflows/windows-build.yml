@@ -92,6 +92,9 @@ jobs:
           ./scripts/bundle-node.ps1
           ./scripts/build-installer.ps1
 
+      - name: Test setup and uninstall in isolated folders
+        run: ./scripts/test-installer.ps1
+
       - name: Upload installable package
         uses: actions/upload-artifact@v4
         with:
