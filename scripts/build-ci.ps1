@@ -205,7 +205,9 @@ $manifest = [ordered]@{
     buildNumber = if ($env:GITHUB_RUN_NUMBER) { [long]$env:GITHUB_RUN_NUMBER } else { 0 }
     obsVersion = $expectedObs
     obsSourceCommit = (& git -C $obsSource rev-parse HEAD)
-    qtVersion = $actualQt
+    # qVersion() uses three components; Windows ProductVersion has a fourth .0.
+    qtVersion = $expectedQt
+    qtRuntimeFileVersion = $actualQt
     architecture = 'x64'
     configuration = $Configuration
     cmakeGenerator = $generator
