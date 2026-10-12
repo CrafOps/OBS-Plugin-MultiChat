@@ -11,6 +11,7 @@ $repository = 'PPekKunGzDev/-OBS-Plugin-MultiChat'
 $packagePath = [IO.Path]::GetFullPath($PackageRoot).TrimEnd('\', '/')
 $obsPath = [IO.Path]::GetFullPath($ObsRoot).TrimEnd('\', '/')
 $statusPath = Join-Path $packagePath '.update-status.txt'
+$disabledPath = Join-Path $packagePath '.update-disabled'
 $lock = $null
 $work = $null
 $cleanupWork = $false
@@ -49,6 +50,9 @@ function Resolve-Child([string]$Root, [string]$Relative) {
 }
 
 try {
+    if (Test-Path -LiteralPath $disabledPath) {
+        exit 0
+    }
     if (-not (Test-Path -LiteralPath (Join-Path $obsPath 'bin/64bit/obs64.exe')) -or
         -not (Test-Path -LiteralPath (Join-Path $packagePath 'build-info.json'))) {
         throw 'Choose the complete release package folder in Settings'
@@ -150,7 +154,15 @@ try {
     # Wait outside the OBS/bridge process job so loaded DLLs can be replaced safely.
     while ((Get-Process -Id $ObsPid -ErrorAction SilentlyContinue) -or
         (Get-Process -Name obs64 -ErrorAction SilentlyContinue)) {
+        if (Test-Path -LiteralPath $disabledPath) {
+            $cleanupWork = $true
+            exit 0
+        }
         Start-Sleep -Seconds 2
+    }
+    if (Test-Path -LiteralPath $disabledPath) {
+        $cleanupWork = $true
+        exit 0
     }
     $backupRoot = Join-Path $work 'backup'
     New-Item -ItemType Directory -Path $backupRoot | Out-Null

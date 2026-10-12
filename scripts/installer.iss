@@ -39,6 +39,50 @@ Root: HKCU; Subkey: "Software\CrafOps\MultiLiveChat"; ValueType: string; ValueNa
 [Code]
 var
   ObsPage: TInputDirWizardPage;
+  UpdateLock: TFileStream;
+  UpdateFolder: String;
+
+function StopUpdater(Folder: String): Boolean;
+var
+  Attempt: Integer;
+begin
+  Result := False;
+  UpdateFolder := Folder;
+  ForceDirectories(Folder);
+  if not SaveStringToFile(Folder + '\.update-disabled', 'setup', False) then
+    Exit;
+  if Assigned(UpdateLock) then
+  begin
+    Result := True;
+    Exit;
+  end;
+  if not FileExists(Folder + '\.update.lock') then
+  begin
+    Result := True;
+    Exit;
+  end;
+  for Attempt := 1 to 60 do
+  begin
+    try
+      UpdateLock := TFileStream.Create(Folder + '\.update.lock', fmOpenReadWrite or fmShareExclusive);
+      Result := True;
+      Exit;
+    except
+      Sleep(500);
+    end;
+  end;
+end;
+
+procedure ReleaseUpdater;
+begin
+  if Assigned(UpdateLock) then
+  begin
+    UpdateLock.Free;
+    UpdateLock := nil;
+  end;
+  if UpdateFolder <> '' then
+    DeleteFile(UpdateFolder + '\.update-disabled');
+end;
 
 function ObsRoot(Param: String): String;
 begin
@@ -145,4 +189,28 @@ begin
       Result := 'Close OBS completely before installing Multi Live Chat.';
     end;
   end;
+  if (Result = '') and not StopUpdater(WizardDirValue) then
+    Result := 'An automatic update is still finishing. Wait a moment, then try installation again.';
+end;
+
+procedure DeinitializeSetup;
+begin
+  ReleaseUpdater;
+end;
+
+function InitializeUninstall: Boolean;
+begin
+  Result := StopUpdater(ExpandConstant('{app}'));
+  if not Result then
+  begin
+    ReleaseUpdater;
+    MsgBox('Close OBS and wait for its automatic update to finish, then uninstall again.', mbError, MB_OK);
+  end;
+end;
+
+procedure DeinitializeUninstall;
+begin
+  ReleaseUpdater;
+  DeleteFile(ExpandConstant('{app}\.update.lock'));
+  DeleteFile(ExpandConstant('{app}\.update-status.txt'));
 end;
