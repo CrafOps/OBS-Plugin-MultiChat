@@ -1,13 +1,11 @@
-/* Multi Live Chat — Lavender bubble theme.
-   Paste this file into an OBS Browser Source's Custom CSS to customize it.
-   Change the variables below; no web fonts or external assets are required. */
+/* Multi Live Chat — shared lavender theme for YouTube and TikTok.
+   Change these variables in OBS Custom CSS to customize the theme. */
 :root {
-  --chat-accent: #914be5;
+  --chat-accent: #a879e8;
   --chat-text: #482071;
   --chat-surface: #f4eaff;
-  --chat-outline: #a879e8;
   --chat-font-size: 18px;
-  --chat-radius: 14px;
+  --chat-radius: 16px;
   font-family: Nunito, 'Segoe UI', Tahoma, sans-serif;
   font-size: var(--chat-font-size);
 }
@@ -25,58 +23,85 @@ html, body {
 #messages {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  padding: 18px;
+  gap: 12px;
+  padding: 14px;
 }
 
 .message {
   position: relative;
-  padding: 0 0 0 48px;
+  padding: 14px 16px 14px 66px;
+  border: 1px solid #bca1e885;
+  border-radius: var(--chat-radius);
+  background: #231a36f5;
+  box-shadow: 0 4px 12px #16082a40;
   overflow-wrap: anywhere;
   animation: enter 400ms ease-out both;
 }
 
 .author {
-  position: relative;
-  z-index: 1;
-  display: table;
-  max-width: calc(100% - 8px);
-  margin: 0 0 -5px 8px;
-  padding: 6px 14px;
-  border: 2px solid #ffffff;
-  border-radius: 12px 12px 12px 4px;
-  background: var(--chat-accent);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 7px;
   color: #ffffff;
-  font-size: .85em;
-  font-weight: 700;
   line-height: 1.4;
-  box-shadow: 0 3px 8px #32145c40;
+}
+
+.display-name {
+  font-weight: 700;
+}
+
+.handle {
+  color: #d2c4e9;
+  font-size: .75em;
+  font-weight: 400;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 10px;
+  color: #d2c4e9;
+  font-size: .65em;
+}
+
+.platform-badge {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #c0293d;
+  color: #ffffff;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.tiktok .platform-badge {
+  background: #83ebe2;
+  color: #143534;
 }
 
 .message-body {
   display: block;
-  min-height: 44px;
-  padding: 15px 16px 12px;
-  border: 2px solid var(--chat-outline);
-  border-radius: var(--chat-radius);
-  background: linear-gradient(145deg, #fcf8fffa, var(--chat-surface));
+  padding: 10px 13px;
+  border: 1px solid #c8a6f0;
+  border-radius: 11px;
+  background: linear-gradient(145deg, #fcf8ff, var(--chat-surface));
   color: var(--chat-text);
-  line-height: 1.55;
+  line-height: 1.5;
   white-space: pre-wrap;
-  box-shadow: 0 3px 0 #411c7066, 0 7px 17px #16082a50;
 }
 
 .avatar {
   position: absolute;
-  top: 6px;
-  left: 0;
+  top: 14px;
+  left: 14px;
   width: 38px;
   height: 38px;
   border: 2px solid #eee2ff;
   border-radius: 50%;
   object-fit: cover;
-  background: #914be5;
-  box-shadow: 0 3px 8px #16082a66;
+  background: #8252c7;
 }
 
 .initials {
@@ -86,39 +111,26 @@ html, body {
   font-weight: 700;
 }
 
-.meta {
-  display: block;
-  margin: 7px 10px 4px;
-  color: #ffffff;
-  font-size: .65em;
-  font-weight: 600;
-  text-shadow: 0 1px 3px #16082acc, 0 0 5px #16082acc;
-}
-
-.tiktok .author {
-  background: #6243b7;
-}
-
 .gift .message-body, .superchat .message-body, .membership .message-body {
   background: linear-gradient(135deg, #fff7dd, #f4eaff);
   border-color: #d6a852;
 }
 
+.gift-details {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  color: #ffe4ab;
+}
+
 .gift-art {
-  display: inline-block;
-  width: 48px;
-  height: 48px;
-  margin: 8px 10px 0;
+  width: 40px;
+  height: 40px;
   object-fit: contain;
 }
 
-.message > div {
-  display: table;
-  margin: 8px 0 0;
-  padding: 5px 12px;
-  border-radius: 10px;
-  background: #482071;
-  color: #fff3ce;
+.gift-label {
   font-size: .85em;
   font-weight: 600;
 }
@@ -130,10 +142,9 @@ html, body {
   object-fit: contain;
 }
 
-.leaving {
-  opacity: 0;
-  transform: translateY(-8px);
-  transition: opacity 350ms, transform 350ms;
+/* Replace entry forwards fill instead of trying to transition underneath it. */
+.message.leaving {
+  animation: exit 550ms ease-in-out forwards;
 }
 
 @keyframes enter {
@@ -147,9 +158,32 @@ html, body {
   }
 }
 
+@keyframes exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .message, .leaving {
-    animation: none;
-    transition: none;
+  @keyframes enter {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes exit {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
   }
 }

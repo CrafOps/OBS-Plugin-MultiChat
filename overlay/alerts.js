@@ -169,11 +169,25 @@ function next() {
   timer = setTimeout(() => {
     card.classList.add('leaving');
     stopAudio();
-    timer = setTimeout(() => {
+    const exitRevision = revision;
+    const finish = () => {
+      if (exitRevision !== revision || !active) {
+        return;
+      }
+      clearTimeout(timer);
       card.hidden = true;
       active = false;
       next();
-    }, 550);
+    };
+    const animation = card.getAnimations().find(item => item.animationName === 'leave');
+    if (animation) {
+      void animation.finished.then(() => {
+        if (card.classList.contains('leaving') && !card.hidden) {
+          finish();
+        }
+      }).catch(() => {});
+    }
+    timer = setTimeout(finish, 750);
   }, options.seconds * 1000);
 }
 

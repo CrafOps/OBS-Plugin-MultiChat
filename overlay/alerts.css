@@ -129,6 +129,10 @@ body {
   }
 }
 @keyframes leave {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
   to {
     opacity: 0;
     transform: translateY(-10px) scale(.98);
@@ -140,7 +144,10 @@ body {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  #alert, #art, #alert.leaving, .progress {
+  #art, .progress {
     animation: none;
+  }
+  #alert, #alert.leaving {
+    animation-duration: 550ms;
   }
 }
