@@ -56,9 +56,17 @@ function display(event) {
   author.className = 'author';
   const handle = event.user.username && event.user.username !== event.user.displayName
     ? ` (${event.user.username.startsWith('@') ? '' : '@'}${event.user.username})` : '';
-  author.textContent = `${platform === 'youtube' ? 'YouTube' : 'TikTok'} · ${event.user.displayName}${handle}`;
+  author.textContent = `${event.user.displayName}${handle}`;
+  const meta = document.createElement('span');
+  meta.className = 'meta';
+  meta.textContent = `${platform.toUpperCase()} · ${new Date(event.timestamp).toLocaleTimeString()}`;
   if (event.user.avatarUrl) {
-    author.prepend(mediaImage(event.user.avatarUrl, '', 'avatar'));
+    element.append(mediaImage(event.user.avatarUrl, '', 'avatar'));
+  } else {
+    const avatar = document.createElement('span');
+    avatar.className = 'avatar initials';
+    avatar.textContent = event.user.displayName.slice(0, 1);
+    element.append(avatar);
   }
   const body = document.createElement('span');
   if (event.messageParts?.length) {
@@ -68,7 +76,7 @@ function display(event) {
   } else {
     body.textContent = event.message ?? '';
   }
-  element.append(author, body);
+  element.append(author, meta, body);
   if (event.media?.imageUrl) {
     element.append(mediaImage(event.media.imageUrl, 'Gift', 'gift-art'));
   }
@@ -122,14 +130,10 @@ function connect() {
           element.dataset.displayName = message.user.displayName ?? element.dataset.displayName;
           element.dataset.username = message.user.username ?? element.dataset.username;
           const author = element.querySelector('.author');
-          const avatar = author.querySelector('img.avatar');
           const name = element.dataset.displayName;
           const username = element.dataset.username;
           const handle = username && username !== name ? ` (${username.startsWith('@') ? '' : '@'}${username})` : '';
-          author.textContent = `YouTube · ${name}${handle}`;
-          if (avatar) {
-            author.prepend(avatar);
-          }
+          author.textContent = `${name}${handle}`;
         }
       } else if (message.kind === 'settings') {
         settings = message.settings;

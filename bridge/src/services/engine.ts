@@ -5,6 +5,35 @@ export class ChatEngine extends EventEmitter {
   private seen = new Map<string, number>();
   private users = new Map<string, { start: number; count: number; text: string }>();
   readonly history: ChatEvent[] = [];
+  readonly combos = new Map<string, { event: ChatEvent; expires: number }>();
+
+  combo(input: unknown, complete: boolean): void {
+    const result = eventSchema.safeParse(input);
+    if (!result.success || result.data.type !== 'gift') {
+      return;
+    }
+    const event = result.data;
+    const key = `${event.user.id}:${event.monetaryEvent?.giftName ?? ''}`;
+    if (complete) {
+      this.combos.delete(key);
+    } else {
+      this.combos.delete(key);
+      this.combos.set(key, { event, expires: this.now() + 15000 });
+      while (this.combos.size > 8) {
+        this.combos.delete(this.combos.keys().next().value!);
+      }
+    }
+    this.emit('combo', { key, event, complete });
+  }
+
+  expireCombos(): void {
+    for (const [key, value] of this.combos) {
+      if (value.expires <= this.now()) {
+        this.combos.delete(key);
+        this.emit('combo', { key, event: value.event, complete: true });
+      }
+    }
+  }
 
   constructor(public settings: Settings, private now = () => Date.now()) {
     super();
@@ -29,11 +58,15 @@ export class ChatEngine extends EventEmitter {
         break;
       }
     }
-    if (!this.settings.enabledTypes.includes(event.type)) {
-      return false;
-    }
     const text = event.message?.toLocaleLowerCase() ?? '';
     if (this.settings.blockedWords.some(word => text.includes(word.toLocaleLowerCase()))) {
+      return false;
+    }
+    if (event.platform === 'tiktok' && ['gift', 'follow'].includes(event.type)) {
+      event.timestamp = Math.min(event.timestamp, now + 5000);
+      this.emit('alert', event);
+    }
+    if (!this.settings.enabledTypes.includes(event.type)) {
       return false;
     }
     const userKey = `${event.platform}:${event.user.id}`;
@@ -91,6 +124,7 @@ export class ChatEngine extends EventEmitter {
 
   clear(): void {
     this.history.length = 0;
+    this.combos.clear();
     this.emit('clear');
   }
 }

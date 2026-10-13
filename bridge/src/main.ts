@@ -10,6 +10,8 @@ import { ChatEngine } from './services/engine.js';
 import { settingsSchema } from './types/protocol.js';
 import { YouTubeConnector } from './platforms/youtube.js';
 import { TikTokConnector } from './platforms/tiktok.js';
+import { SharingService } from './services/sharing.js';
+import { SoundStore } from './services/sounds.js';
 
 const port = z.coerce.number().int().min(1024).max(65535).parse(process.env.BRIDGE_PORT ?? 17865);
 const controlToken = process.env.BRIDGE_TOKEN;
@@ -19,11 +21,22 @@ if (!controlToken || controlToken.length < 32) {
 const store = new Store(process.env.BRIDGE_DATA ?? join(process.env.LOCALAPPDATA ?? '.', 'obs-unified-chat'));
 await store.initialize();
 const engine = new ChatEngine(await store.settings());
+const sharing = new SharingService(store);
+const sounds = new SoundStore(join(store.directory, 'sounds'));
+const soundNames: Record<string, string> = {};
+for (const kind of ['gift', 'follow'] as const) {
+  try {
+    soundNames[kind] = (await sounds.get(kind))?.name ?? '';
+  } catch {
+    soundNames[kind] = '';
+  }
+}
 const overlayToken = randomBytes(32).toString('hex');
 const origin = `http://127.0.0.1:${port}`;
 const app = Fastify({ logger: false, bodyLimit: 16384, requestTimeout: 15000 });
 const wss = new WebSocketServer({ noServer: true, maxPayload: 16384 });
-const roles = new Map<WebSocket, 'control' | 'overlay'>();
+type Role = 'control' | 'overlay' | 'alerts';
+const roles = new Map<WebSocket, Role>();
 const alive = new Set<WebSocket>();
 let closing = false;
 
@@ -35,6 +48,20 @@ function authorized(candidate: string | undefined, expected: string): boolean {
 
 function overlaySettings() {
   return { overlayLimit: engine.settings.overlayLimit, overlaySeconds: engine.settings.overlaySeconds };
+}
+
+function alertSettings() {
+  return { alerts: engine.settings.alerts,
+    sounds: Object.fromEntries(['gift', 'follow'].map(kind => [kind, soundNames[kind]
+      ? `${origin}/sounds/${kind}?token=${overlayToken}` : ''])) };
+}
+
+function publishAlert(packet: unknown): void {
+  for (const [socket, role] of roles) {
+    if (role === 'alerts') {
+      send(socket, packet);
+    }
+  }
 }
 
 function send(socket: WebSocket, data: unknown): void {
@@ -60,9 +87,35 @@ const changed = () => publish({ kind: 'state', youtube: youtube.state, tiktok: t
   broadcasts: youtube.broadcasts }, true);
 const youtube = new YouTubeConnector(store, engine, changed);
 const tiktok = new TikTokConnector(engine, changed);
-engine.on('event', event => publish({ kind: 'event', event }));
-engine.on('profile', profile => publish({ kind: 'profile', ...profile }));
-engine.on('clear', () => publish({ kind: 'clear' }));
+engine.on('event', event => {
+  const packet = { kind: 'event', event };
+  publish(packet);
+  sharing.publish(packet);
+});
+engine.on('profile', profile => {
+  const packet = { kind: 'profile', ...profile };
+  publish(packet);
+  sharing.publish(packet);
+});
+engine.on('combo', combo => {
+  const packet = { kind: 'combo', ...combo };
+  publish(packet);
+  sharing.publish(packet);
+});
+engine.on('alert', event => publishAlert({ kind: 'alert', event }));
+engine.on('clear', () => {
+  publish({ kind: 'clear' });
+  sharing.publish({ kind: 'clear' });
+});
+sharing.on('state', state => publish({ kind: 'sharing', ...state }, true));
+sharing.on('ready', () => {
+  for (const event of engine.history.slice(-50)) {
+    sharing.publish({ kind: 'event', event });
+  }
+});
+await sharing.initialize(engine.settings.sharingAutoStart);
+const comboExpiry = setInterval(() => engine.expireCombos(), 2000);
+comboExpiry.unref();
 
 app.addHook('onRequest', async (request, reply) => {
   if (request.headers.host !== `127.0.0.1:${port}`
@@ -78,15 +131,34 @@ const overlayDirectory = fileURLToPath(new URL('../../overlay/', import.meta.url
 for (const [route, filename, contentType] of [
   ['/overlay', 'index.html', 'text/html; charset=utf-8'],
   ['/overlay.js', 'overlay.js', 'application/javascript; charset=utf-8'],
-  ['/overlay.css', 'overlay.css', 'text/css; charset=utf-8']
+  ['/overlay.css', 'overlay.css', 'text/css; charset=utf-8'],
+  ['/viewer', 'viewer.html', 'text/html; charset=utf-8'],
+  ['/viewer.js', 'viewer.js', 'application/javascript; charset=utf-8'],
+  ['/viewer.css', 'viewer.css', 'text/css; charset=utf-8'],
+  ['/alerts', 'alerts.html', 'text/html; charset=utf-8'],
+  ['/alerts.js', 'alerts.js', 'application/javascript; charset=utf-8'],
+  ['/alerts.css', 'alerts.css', 'text/css; charset=utf-8'],
+  ['/alert-queue.mjs', 'alert-queue.mjs', 'application/javascript; charset=utf-8']
 ] as const) {
   app.get(route, async (_request, reply) => {
     reply.header('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src https:; frame-ancestors 'none'");
     return reply.type(contentType).send(await readFile(join(overlayDirectory, filename), 'utf8'));
   });
 }
+app.get<{ Params: { kind: string }; Querystring: { token?: string } }>('/sounds/:kind', async (request, reply) => {
+  if (!['gift', 'follow'].includes(request.params.kind) || !authorized(request.query.token, overlayToken)) {
+    return reply.code(403).send({ error: 'Not authorized' });
+  }
+  const sound = await sounds.get(request.params.kind as 'gift' | 'follow');
+  return sound ? reply.type(sound.mime).send(sound.bytes) : reply.code(404).send({ error: 'Default sound' });
+});
 
 const commandSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('sharing'), requestId: z.string().max(64),
+    action: z.enum(['start', 'stop', 'reset']), consent: z.boolean().default(false) }),
+  z.object({ kind: z.literal('sound'), requestId: z.string().max(64),
+    action: z.enum(['load', 'clear']), type: z.enum(['gift', 'follow']), path: z.string().max(4096).default('') }),
+  z.object({ kind: z.literal('testAlert'), requestId: z.string().max(64), type: z.enum(['gift', 'follow']) }),
   z.object({ kind: z.literal('login'), requestId: z.string().max(64) }),
   z.object({ kind: z.literal('logout'), requestId: z.string().max(64) }),
   z.object({ kind: z.literal('refresh'), requestId: z.string().max(64) }),
@@ -95,7 +167,7 @@ const commandSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('reply'), requestId: z.string().max(64), message: z.string().trim().min(1).max(200) })
 ]);
 let commands = Promise.resolve();
-wss.on('connection', (socket: WebSocket, _request: unknown, role: 'control' | 'overlay') => {
+wss.on('connection', (socket: WebSocket, _request: unknown, role: Role) => {
   roles.set(socket, role);
   alive.add(socket);
   socket.on('pong', () => alive.add(socket));
@@ -105,10 +177,14 @@ wss.on('connection', (socket: WebSocket, _request: unknown, role: 'control' | 'o
   });
   socket.on('error', () => socket.close());
   send(socket, { kind: 'snapshot', events: engine.history,
-    settings: role === 'control' ? engine.settings : overlaySettings() });
+    combos: [...engine.combos].map(([key, value]) => ({ key, event: value.event, complete: false })),
+    settings: role === 'control' ? engine.settings : role === 'alerts' ? alertSettings() : overlaySettings() });
   if (role === 'control') {
     send(socket, { kind: 'state', youtube: youtube.state, tiktok: tiktok.state,
-      broadcasts: youtube.broadcasts, overlayUrl: `${origin}/overlay#${overlayToken}` });
+      broadcasts: youtube.broadcasts, overlayUrl: `${origin}/overlay#${overlayToken}`,
+      viewerUrl: `${origin}/viewer#${overlayToken}`, alertsUrl: `${origin}/alerts#${overlayToken}` });
+    send(socket, { kind: 'sharing', ...sharing.state });
+    send(socket, { kind: 'sounds', names: soundNames });
   }
   let windowStart = Date.now();
   let count = 0;
@@ -142,6 +218,35 @@ wss.on('connection', (socket: WebSocket, _request: unknown, role: 'control' | 'o
       try {
         let url: string | undefined;
         switch (command.kind) {
+          case 'sharing':
+            if (command.action === 'start') {
+              await sharing.start(command.consent);
+            } else if (command.action === 'reset') {
+              await sharing.reset();
+            } else {
+              sharing.stop();
+              engine.settings.sharingAutoStart = false;
+              await store.saveSettings(engine.settings);
+              publish({ kind: 'settings', settings: engine.settings }, true);
+            }
+            break;
+          case 'sound':
+            if (command.action === 'load') {
+              await sounds.import(command.type, command.path);
+            } else {
+              await sounds.clear(command.type);
+            }
+            soundNames[command.type] = (await sounds.get(command.type))?.name ?? '';
+            publish({ kind: 'sounds', names: soundNames }, true);
+            publishAlert({ kind: 'settings', settings: alertSettings() });
+            break;
+          case 'testAlert':
+            publishAlert({ kind: 'alert', test: true, event: {
+              id: randomBytes(8).toString('hex'), platform: 'tiktok', type: command.type,
+              timestamp: Date.now(), user: { id: 'test', username: 'crafops', displayName: 'CrafOps · Test' },
+              monetaryEvent: command.type === 'gift' ? { giftName: 'Rose', quantity: 10 } : undefined
+            } });
+            break;
           case 'login':
             url = await youtube.login();
             break;
@@ -159,20 +264,37 @@ wss.on('connection', (socket: WebSocket, _request: unknown, role: 'control' | 'o
             await youtube.send(command.message);
             break;
           case 'settings':
+            if (command.settings.sharingAutoStart && !sharing.state.consented) {
+              throw new Error('Enable mobile sharing with consent first');
+            }
+            const previous = engine.settings;
             await store.saveSettings(command.settings);
             engine.settings = command.settings;
             engine.trim();
             for (const [client, clientRole] of roles) {
-              send(client, { kind: 'settings', settings: clientRole === 'control' ? engine.settings : overlaySettings() });
+              send(client, { kind: 'settings', settings: clientRole === 'control' ? engine.settings
+                : clientRole === 'alerts' ? alertSettings() : overlaySettings() });
             }
-            await youtube.discover();
-            await tiktok.connect(engine.settings.tiktokUsername);
+            if (previous.youtubeLiveUrl !== engine.settings.youtubeLiveUrl
+                || previous.youtubeBroadcastId !== engine.settings.youtubeBroadcastId
+                || previous.autoDetect !== engine.settings.autoDetect
+                || previous.autoReconnect !== engine.settings.autoReconnect) {
+              await youtube.discover();
+            }
+            if (previous.tiktokUsername !== engine.settings.tiktokUsername
+                || previous.tiktokEnabled !== engine.settings.tiktokEnabled
+                || previous.autoReconnect !== engine.settings.autoReconnect) {
+              await tiktok.connect(engine.settings.tiktokUsername);
+            }
             break;
         }
         send(socket, { kind: 'result', requestId: command.requestId, ok: true, url });
       } catch (error) {
         // External error objects can contain request headers and tokens; never serialize them.
-        const detail = command.kind === 'login' && !process.env.YOUTUBE_CLIENT_ID
+        const detail = command.kind === 'sharing'
+          ? 'Sharing request failed. Check internet access and consent; your link was not automatically reset.'
+          : command.kind === 'sound' ? 'Choose a readable WAV or MP3 sound no larger than 2 MB.'
+          : command.kind === 'login' && !process.env.YOUTUBE_CLIENT_ID
           ? 'Configure Google Desktop OAuth client credentials first'
           : 'Operation failed. Check account permissions, active stream, and local configuration.';
         send(socket, { kind: 'result', requestId: command.requestId, ok: false, error: detail });
@@ -183,9 +305,10 @@ wss.on('connection', (socket: WebSocket, _request: unknown, role: 'control' | 'o
 
 app.server.on('upgrade', (request, socket, head) => {
   const url = new URL(request.url ?? '/', origin);
-  const role = url.pathname === '/control' ? 'control' : url.pathname === '/events' ? 'overlay' : undefined;
+  const role: Role | undefined = url.pathname === '/control' ? 'control'
+    : url.pathname === '/events' ? url.searchParams.get('mode') === 'alerts' ? 'alerts' : 'overlay' : undefined;
   const token = role === 'control' ? request.headers.authorization?.replace(/^Bearer /, '') : url.searchParams.get('token') ?? undefined;
-  const validOrigin = role === 'overlay' ? request.headers.origin === origin : !request.headers.origin;
+  const validOrigin = role !== 'control' ? request.headers.origin === origin : !request.headers.origin;
   if (!role || !validOrigin || request.headers.host !== `127.0.0.1:${port}`
       || !authorized(token, role === 'control' ? controlToken : overlayToken) || roles.size >= 16) {
     socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
@@ -213,6 +336,8 @@ async function shutdown(): Promise<void> {
   process.stdin.destroy();
   clearInterval(heartbeat);
   clearInterval(parentWatch);
+  clearInterval(comboExpiry);
+  sharing.stop();
   youtube.stop();
   tiktok.stop();
   for (const socket of roles.keys()) {

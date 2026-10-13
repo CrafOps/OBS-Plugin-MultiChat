@@ -126,6 +126,12 @@ $savedRuntimePath = $env:PATH
 $savedPluginPath = $env:QT_PLUGIN_PATH
 $savedQtPlatform = $env:QT_QPA_PLATFORM
 $runtimeBins = @((Join-Path $qtPrefix 'bin'))
+# The complete Dock smoke test also links the freshly built OBS SDK.
+foreach ($runtime in (Get-ChildItem -LiteralPath $obsBuild -Recurse -File -Filter '*.dll')) {
+    if ($runtime.Name -in @('obs.dll', 'obs-frontend-api.dll')) {
+        $runtimeBins += $runtime.DirectoryName
+    }
+}
 foreach ($prefix in ($dependencyPrefixes -split ';')) {
     foreach ($subdirectory in @('bin', 'bin/64bit')) {
         $candidate = Join-Path $prefix $subdirectory
@@ -201,7 +207,7 @@ foreach ($backendName in @('qschannelbackend', 'qcertonlybackend')) {
 }
 
 $manifest = [ordered]@{
-    pluginVersion = '0.2.2'
+    pluginVersion = '0.3.0'
     repositoryId = 1414781362
     updaterSupportsRepositoryMoves = $true
     buildNumber = if ($env:GITHUB_RUN_NUMBER) { [long]$env:GITHUB_RUN_NUMBER } else { 0 }

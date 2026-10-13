@@ -8,3 +8,8 @@ package/
 .test-data-*/
 .ci/
 updates/
+relay-data/
+hosting/public/
+hosting/wrangler.local.jsonc
+hosting/src/generated/
+.wrangler/

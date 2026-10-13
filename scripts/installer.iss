@@ -5,7 +5,7 @@
   #define RepositoryName "PPekKunGzDev/-OBS-Plugin-MultiChat"
 #endif
 #ifndef PluginVersion
-  #define PluginVersion "0.2.2"
+  #define PluginVersion "0.3.0"
 #endif
 
 [Setup]

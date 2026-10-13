@@ -1,0 +1,24 @@
+{
+  "name": "multi-live-chat-cloudflare",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "GPL-3.0-or-later",
+  "scripts": {
+    "assets": "node prepare-assets.mjs",
+    "types": "npm run assets && wrangler types",
+    "check": "npm run assets && tsc --noEmit",
+    "build": "npm run assets && wrangler deploy --dry-run --outdir ../build/worker",
+    "dev": "npm run assets && wrangler dev --config wrangler.local.jsonc",
+    "deploy": "npm run assets && wrangler deploy"
+  },
+  "dependencies": {
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^5.9.2",
+    "wrangler": "latest",
+    "ws": "^8.22.0"
+  }
+}

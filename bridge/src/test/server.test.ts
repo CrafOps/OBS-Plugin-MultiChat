@@ -81,6 +81,22 @@ test('local bridge authenticates controls, restricts overlay and shuts down', { 
     const snapshot = await packet(overlay);
     assert.deepEqual(Object.keys(snapshot.settings as object).sort(), ['overlayLimit', 'overlaySeconds']);
     assert.equal(snapshot.youtube, undefined);
+    const alertSocket = new WebSocket(`ws://127.0.0.1:${port}/events?mode=alerts&token=${new URL(overlayUrl).hash.slice(1)}`, { origin });
+    sockets.push(alertSocket);
+    const alertSnapshot = await packet(alertSocket);
+    assert.equal((alertSnapshot.settings as { alerts: { audio: string } }).alerts.audio, 'stream');
+    assert.equal((alertSnapshot.settings as Record<string, unknown>).youtubeLiveUrl, undefined);
+    const sharingDenied = packet(control);
+    control.send(JSON.stringify({ kind: 'sharing', action: 'start', consent: false, requestId: 'no-consent' }));
+    assert.equal((await sharingDenied).ok, false);
+    const alertReceived = packet(alertSocket);
+    const alertResult = packet(control);
+    control.send(JSON.stringify({ kind: 'testAlert', type: 'gift', requestId: 'test-gift' }));
+    const alertPacket = await alertReceived;
+    assert.equal(alertPacket.kind, 'alert');
+    assert.equal(alertPacket.test, true);
+    assert.equal((await alertResult).ok, true);
+    assert.equal((await fetch(`${origin}/sounds/gift?token=wrong`)).status, 403);
 
     const replyResult = packet(control);
     control.send(JSON.stringify({ kind: 'reply', requestId: 'no-auth', message: 'hello' }));

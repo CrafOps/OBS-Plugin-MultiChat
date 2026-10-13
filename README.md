@@ -184,6 +184,10 @@ Close OBS, then use **Windows Settings → Apps → Installed apps → Multi Liv
 
 ## Development
 
+The 0.3.0 source adds TikTok gift/follow alerts, custom sounds and opt-in read-only
+mobile sharing. See [the Thai/English alerts and mobile guide](docs/ALERTS_MOBILE.md).
+Native build and OBS validation are still required before publishing this version.
+
 The project contains a C++20/Qt Widgets OBS plugin, a local TypeScript bridge and a Browser Source overlay. Normal installation uses the prebuilt Setup; these tools are only for contributors.
 
 | Folder | Contents |

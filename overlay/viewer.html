@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="referrer" content="no-referrer">
+    <title>Multi Live Chat · Read only</title>
+    <link rel="stylesheet" href="/viewer.css">
+    <script defer src="/viewer.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1>Multi Live Chat</h1>
+      <p>by @CrafOps <span id="status" role="status">Connecting…</span></p>
+      <div class="filters">
+        <input id="search" type="search" placeholder="ค้นหา / Search messages" aria-label="Search messages">
+        <select id="platform" aria-label="Platform">
+          <option value="all">All</option>
+          <option value="youtube">YouTube</option>
+          <option value="tiktok">TikTok</option>
+        </select>
+      </div>
+    </header>
+    <main id="messages" aria-label="Chat messages"></main>
+    <aside id="combos" aria-label="Gift combos"></aside>
+    <footer><label><input id="scroll" type="checkbox" checked> Auto-scroll</label><span>Read only · อ่านอย่างเดียว</span></footer>
+  </body>
+</html>

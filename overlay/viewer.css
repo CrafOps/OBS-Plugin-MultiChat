@@ -1,0 +1,141 @@
+:root {
+  color-scheme: dark;
+  font-family: "Segoe UI", Tahoma, sans-serif;
+  background: #1d2029;
+  color: #edf1fa;
+  font-size: 14px;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0 auto;
+  max-width: 760px;
+  padding: 0 14px 65px;
+}
+header {
+  position: sticky;
+  top: 0;
+  background: #1d2029;
+  padding: 18px 0 12px;
+  z-index: 2;
+}
+h1 {
+  font-size: 22px;
+  margin: 0 0 5px;
+}
+header p {
+  color: #aab6ce;
+  font-size: 12px;
+  margin: 0 0 16px;
+}
+#status {
+  float: right;
+  color: #6ee0bd;
+}
+.filters {
+  display: flex;
+  gap: 8px;
+}
+input[type="search"], select {
+  border: 1px solid #414b63;
+  border-radius: 7px;
+  background: #141925;
+  color: inherit;
+  padding: 11px;
+  font: inherit;
+  min-width: 0;
+}
+input[type="search"] {
+  flex: 1;
+}
+.message {
+  position: relative;
+  background: #1c2230;
+  border: 1px solid #343e51;
+  border-left: 3px solid #67dfd6;
+  border-radius: 10px;
+  padding: 13px 13px 13px 58px;
+  margin: 9px 0;
+  overflow-wrap: anywhere;
+}
+.youtube {
+  border-left-color: #ff7d8b;
+}
+.gift {
+  border-color: #987238;
+  background: #29241d;
+}
+.avatar {
+  position: absolute;
+  left: 12px;
+  top: 13px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #333e54;
+  display: grid;
+  place-items: center;
+}
+.author {
+  font-weight: 600;
+}
+.meta {
+  font-size: 11px;
+  color: #86d6e1;
+  margin: 3px 0 8px;
+}
+.body {
+  white-space: pre-wrap;
+  line-height: 1.55;
+}
+.emoji {
+  height: 1.4em;
+  width: 1.4em;
+  object-fit: contain;
+  vertical-align: middle;
+}
+.gift-art {
+  height: 48px;
+  width: 48px;
+  object-fit: contain;
+}
+footer {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(100%, 760px);
+  padding: 14px;
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
+  background: #1d2029;
+  border-top: 1px solid #343e51;
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+input[type="checkbox"] {
+  accent-color: #8e9aff;
+  width: 19px;
+  height: 19px;
+  vertical-align: middle;
+}
+#combos {
+  position: fixed;
+  bottom: 68px;
+  right: max(14px, calc((100vw - 732px) / 2));
+  max-width: min(300px, 85vw);
+  pointer-events: none;
+}
+.combo {
+  padding: 9px 12px;
+  margin-top: 5px;
+  background: #34291eee;
+  border: 1px solid #c49c5f;
+  border-radius: 8px;
+  font-size: 12px;
+}
+[hidden] {
+  display: none !important;
+}
