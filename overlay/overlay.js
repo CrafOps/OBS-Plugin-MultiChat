@@ -69,6 +69,7 @@ function display(event) {
     element.append(avatar);
   }
   const body = document.createElement('span');
+  body.className = 'message-body';
   if (event.messageParts?.length) {
     for (const part of event.messageParts) {
       body.append(part.type === 'image' ? mediaImage(part.url, part.alt, 'emoji') : document.createTextNode(part.text));

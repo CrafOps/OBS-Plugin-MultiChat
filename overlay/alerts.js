@@ -107,24 +107,22 @@ async function playSound(kind) {
 
 function defaultTone(kind) {
   const start = audioContext.currentTime;
-  const frequencies = kind === 'gift' ? [320] : [660, 880];
+  // Soft ascending chimes, with a short attack and a clean bell-like decay.
+  const frequencies = kind === 'gift' ? [783.99, 987.77, 1174.66] : [659.25, 880];
   frequencies.forEach((frequency, index) => {
     const oscillator = audioContext.createOscillator();
     const gain = audioContext.createGain();
-    const time = start + index * .16;
-    oscillator.type = kind === 'gift' ? 'triangle' : 'sine';
+    const time = start + index * (kind === 'gift' ? .09 : .14);
+    oscillator.type = 'sine';
     oscillator.frequency.setValueAtTime(frequency, time);
-    if (kind === 'gift') {
-      oscillator.frequency.exponentialRampToValueAtTime(160, time + .32);
-    }
     gain.gain.setValueAtTime(.001, time);
-    gain.gain.exponentialRampToValueAtTime(.25, time + .015);
-    gain.gain.exponentialRampToValueAtTime(.001, time + .3);
+    gain.gain.exponentialRampToValueAtTime(.16, time + .012);
+    gain.gain.exponentialRampToValueAtTime(.001, time + .48);
     oscillator.connect(gain);
     gain.connect(master);
     track(oscillator);
     oscillator.start(time);
-    oscillator.stop(time + .32);
+    oscillator.stop(time + .5);
   });
 }
 
@@ -157,7 +155,7 @@ function next() {
   document.getElementById('avatar').replaceChildren(event.user.avatarUrl ? image(event.user.avatarUrl, '') : '');
   const gift = event.monetaryEvent;
   document.getElementById('description').textContent = event.type === 'gift'
-    ? `${gift?.giftName ?? 'Gift'} ×${gift?.quantity ?? 1}` : 'เริ่มติดตามแล้ว · Thanks for following!';
+    ? `${gift?.giftName ?? 'Gift'} ×${gift?.quantity ?? 1}` : 'Thanks for following!';
   document.getElementById('art').replaceChildren(event.media?.imageUrl
     ? image(event.media.imageUrl, '🎁') : document.createTextNode(event.type === 'gift' ? '🎁' : '💚'));
   // Restart the entry/progress animation for each queued alert.
@@ -175,7 +173,7 @@ function next() {
       card.hidden = true;
       active = false;
       next();
-    }, 350);
+    }, 550);
   }, options.seconds * 1000);
 }
 

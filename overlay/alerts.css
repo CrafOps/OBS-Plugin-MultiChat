@@ -24,7 +24,7 @@ body {
   background: linear-gradient(115deg, #2e2338f5, #141e2ef5);
   border: 2px solid #d9aa68;
   box-shadow: 0 10px 24px #0005;
-  animation: arrive 400ms cubic-bezier(.2, .9, .2, 1.15) both;
+  animation: arrive 550ms cubic-bezier(.22, .61, .36, 1) both;
 }
 #alert.follow {
   border-color: #6bdfd6;
@@ -102,7 +102,7 @@ body {
   background: #6bdfd6;
 }
 #alert.leaving {
-  animation: leave 350ms ease-in forwards;
+  animation: leave 550ms ease-in-out forwards;
 }
 [hidden] {
   display: none !important;
@@ -110,7 +110,7 @@ body {
 @keyframes arrive {
   from {
     opacity: 0;
-    transform: translateX(-70px) scale(.95);
+    transform: translateY(14px) scale(.98);
   }
   to {
     opacity: 1;
@@ -131,7 +131,7 @@ body {
 @keyframes leave {
   to {
     opacity: 0;
-    transform: translateY(-15px);
+    transform: translateY(-10px) scale(.98);
   }
 }
 @keyframes duration {

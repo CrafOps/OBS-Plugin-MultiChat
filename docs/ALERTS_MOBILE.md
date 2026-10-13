@@ -117,3 +117,21 @@ traffic is bounded and may drop older queued events instead of growing memory.
 Use the private mobile link across networks. The separate localhost reader and
 transparent chat overlay are for the OBS computer. If sharing is unavailable,
 local chat and local alerts remain usable.
+
+## Chat overlay CSS / CSS ของแชทบนสตรีม
+
+The Browser Source chat overlay now includes a lavender bubble theme inspired by
+the supplied YouTube chatbox. It supports both platforms, avatars, emoji and gifts
+without downloading web fonts. Use the local overlay URL from Settings as usual.
+For your own colors, paste `overlay/overlay.css` from the package into the Browser
+Source's Custom CSS and change the variables at the top. Clear old Custom CSS to
+see the included theme; existing overrides take precedence over the bundled file.
+
+หน้าแชทสำหรับ Browser Source ใช้ธีมกล่องข้อความม่วงอ่อน พร้อมชื่อผู้ส่ง รูปโปรไฟล์
+อีโมจิ และของขวัญทั้งสองแพลตฟอร์ม ใช้ URL overlay ใน Settings ได้เลย
+ถ้าต้องการปรับสีเอง ให้นำไฟล์ `overlay/overlay.css` ในชุดติดตั้งไปใส่ช่อง Custom CSS
+แล้วแก้ตัวแปรด้านบน หากมี CSS เก่าค้างอยู่ ให้ล้างก่อนเพื่อเห็นธีมใหม่
+
+Default gift sound: Sparkle (three ascending chimes).
+Default follow sound: Welcome (two soft chimes).
+Gift/follow cards fade in and out over 550 ms.

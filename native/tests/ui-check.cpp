@@ -58,6 +58,7 @@ int main(int argc, char **argv)
             std::cerr << "Alert or mobile Settings group is missing\n";
             return 1;
         }
+        dock.grab().save("native-ui-settings.png");
         for (const auto *checkbox : dock.findChildren<QCheckBox *>()) {
             if (checkbox->text() == "Automatically share when OBS opens"
                 && (checkbox->isChecked() || checkbox->isEnabled())) {
@@ -85,6 +86,7 @@ int main(int argc, char **argv)
         QImage image(checkbox.size(), QImage::Format_ARGB32);
         image.fill(Qt::transparent);
         checkbox.render(&image);
+        image.save("native-ui-checkbox.png");
         int tickPixels = 0;
         for (int y = 10; y < 30; ++y) {
             for (int x = 0; x < 20; ++x) {

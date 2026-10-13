@@ -660,8 +660,8 @@ void ChatDock::receive(const QJsonObject &message)
         }
     } else if (kind == "sounds") {
         const auto names = message.value("names").toObject();
-        giftSound->setText(names.value("gift").toString().isEmpty() ? "Default · ตุ๊ง" : names.value("gift").toString());
-        followSound->setText(names.value("follow").toString().isEmpty() ? "Default · ติ๊งติ๊ง" : names.value("follow").toString());
+        giftSound->setText(names.value("gift").toString().isEmpty() ? "Default · Sparkle" : names.value("gift").toString());
+        followSound->setText(names.value("follow").toString().isEmpty() ? "Default · Welcome" : names.value("follow").toString());
     } else if (kind == "profile") {
         const auto profile = message.value("user").toObject();
         for (int row = 0; row < timeline->count(); ++row) {

@@ -104,6 +104,8 @@ jobs:
           path: |
             package/
             build/release/Multi-Live-Chat-Setup.exe
+            build/native/native-ui-checkbox.png
+            build/native/native-ui-settings.png
           if-no-files-found: error
           retention-days: 14
           compression-level: 6

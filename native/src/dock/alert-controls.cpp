@@ -85,8 +85,8 @@ void ChatDock::createAlertControls(QVBoxLayout *layout)
             bridge.command("testAlert", {{"type", kind}});
         });
     };
-    addSound("Gift sound · ตุ๊ง", "gift", giftSound);
-    addSound("Follow sound · ติ๊งติ๊ง", "follow", followSound);
+    addSound("Gift sound · Sparkle", "gift", giftSound);
+    addSound("Follow sound · Welcome", "follow", followSound);
     alertsUrl = new QLineEdit;
     alertsUrl->setReadOnly(true);
     form->addRow("Local alerts URL", alertsUrl);
