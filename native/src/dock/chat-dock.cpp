@@ -25,6 +25,10 @@
 #include <obs.h>
 #include <windows.h>
 #include "chat-delegate.hpp"
+#include "readable-checkbox.hpp"
+#include <QEvent>
+#include <QPixmap>
+#include <QFontMetrics>
 
 ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
 {
@@ -135,8 +139,8 @@ ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
             padding: 4px 0;
         }
         QCheckBox::indicator {
-            width: 15px;
-            height: 15px;
+            width: 20px;
+            height: 20px;
             border: 1px solid #56647f;
             border-radius: 4px;
             background: #131824;
@@ -235,7 +239,7 @@ ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
     loginActions->addWidget(logout);
     optionLayout->addLayout(loginActions);
     optionLayout->addWidget(broadcasts);
-    autoDetect = new QCheckBox("Auto-detect my broadcasts");
+    autoDetect = new ReadableCheckBox("Auto-detect my broadcasts");
     autoDetect->setChecked(true);
     optionLayout->addWidget(autoDetect);
     youtubeLayout->addWidget(accountOptions);
@@ -253,7 +257,7 @@ ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
     username = new QLineEdit;
     username->setPlaceholderText("TikTok username (with or without @)");
     tiktokLayout->addWidget(username);
-    tiktokEnabled = new QCheckBox("Enable TikTok chat (unofficial)");
+    tiktokEnabled = new ReadableCheckBox("Enable TikTok chat (unofficial)");
     tiktokLayout->addWidget(tiktokEnabled);
     auto *applyAccounts = new QPushButton("Connect sources");
     applyAccounts->setObjectName("primary");
@@ -287,6 +291,23 @@ ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
     timeline->setResizeMode(QListView::Adjust);
     timeline->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     timeline->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    comboNotice = new QLabel(timeline->viewport());
+    comboNotice->setObjectName("comboNotice");
+    comboNotice->setTextFormat(Qt::PlainText);
+    comboNotice->setWordWrap(true);
+    comboNotice->setAttribute(Qt::WA_TransparentForMouseEvents);
+    comboNotice->setStyleSheet(R"(
+        QLabel#comboNotice {
+            background: #332b20;
+            color: #ffdb9f;
+            border: 1px solid #b99255;
+            border-radius: 7px;
+            padding: 8px;
+            font-size: 11px;
+        }
+    )");
+    comboNotice->hide();
+    timeline->viewport()->installEventFilter(this);
     emptyState = new QLabel("Your chat, in one place\n\nConnect YouTube or TikTok in Accounts.\nNew messages will appear here.");
     emptyState->setObjectName("empty");
     emptyState->setAlignment(Qt::AlignCenter);
@@ -294,7 +315,7 @@ ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
     chatLayout->addWidget(emptyState);
     chatLayout->addWidget(timeline, 1);
     auto *tools = new QHBoxLayout;
-    autoScroll = new QCheckBox("Auto-scroll");
+    autoScroll = new ReadableCheckBox("Auto-scroll");
     autoScroll->setChecked(true);
     auto *clear = new QPushButton("Clear");
     tools->addWidget(autoScroll);
@@ -357,12 +378,12 @@ ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
             nodePath->setText(path);
         }
     });
-    startWithObs = new QCheckBox("Start bridge with OBS");
+    startWithObs = new ReadableCheckBox("Start bridge with OBS");
     startWithObs->setChecked(local.value("startWithObs", true).toBool());
-    autoReconnect = new QCheckBox("Reconnect platform sessions");
+    autoReconnect = new ReadableCheckBox("Reconnect platform sessions");
     autoReconnect->setChecked(true);
     form->addRow(startWithObs);
-    autoUpdate = new QCheckBox("Automatically update when OBS closes");
+    autoUpdate = new ReadableCheckBox("Automatically update when OBS closes");
     autoUpdate->setChecked(local.value("autoUpdate", true).toBool());
     autoUpdate->setToolTip("Checks GitHub Releases at startup; installs verified updates after OBS exits.");
     form->addRow(autoUpdate);
@@ -400,6 +421,16 @@ ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
     overlayForm->addRow("Local overlay URL", overlayUrl);
     auto *copy = new QPushButton("Copy overlay URL");
     overlayForm->addRow(copy);
+    viewerUrl = new QLineEdit;
+    viewerUrl->setReadOnly(true);
+    overlayForm->addRow("Local chat reader", viewerUrl);
+    auto *copyReader = new QPushButton("Copy local reader URL");
+    overlayForm->addRow(copyReader);
+    connect(copyReader, &QPushButton::clicked, this, [this] {
+        QApplication::clipboard()->setText(viewerUrl->text());
+    });
+    createAlertControls(settingsLayout);
+    createSharingControls(settingsLayout);
     auto *credentialToggle = new QPushButton("Optional Google API / OAuth settings");
     credentialToggle->setCheckable(true);
     settingsLayout->addWidget(credentialToggle);
@@ -433,6 +464,14 @@ ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
     connect(&bridge, &BridgeClient::received, this, &ChatDock::receive);
     connect(&bridge, &BridgeClient::connected, this, [this](bool connected) {
         bridgeConnected = connected;
+        sharingStart->setEnabled(connected);
+        sharingAutoStart->setEnabled(connected && sharingConsented);
+        if (!connected) {
+            activeCombos.clear();
+            updateComboNotice();
+            sharingStop->setEnabled(false);
+            sharingReset->setEnabled(false);
+        }
         sendButton->setEnabled(connected && canReply && pendingReply.isEmpty());
     });
     connect(login, &QPushButton::clicked, this, [this] {
@@ -520,9 +559,16 @@ void ChatDock::saveSettings()
     settings.insert("fontSize", fontSize->value());
     settings.insert("overlayLimit", overlayLimit->value());
     settings.insert("overlaySeconds", overlaySeconds->value());
+    settings.insert("sharingAutoStart", sharingAutoStart->isChecked());
+    settings.insert("alerts", QJsonObject{
+        {"enabled", alertsEnabled->isChecked()}, {"gifts", giftAlerts->isChecked()},
+        {"follows", followAlerts->isChecked()}, {"seconds", alertSeconds->value()},
+        {"volume", alertVolume->value()}, {"audio", alertAudio->currentData().toString()}
+    });
     settings.insert("youtubeBroadcastId", broadcasts->currentData().toString());
     settings.insert("youtubeLiveUrl", youtubeLiveUrl->text().trimmed());
     bridge.command("settings", {{"settings", settings}});
+    configureAlertsSource(false, true);
 }
 
 void ChatDock::sendReply()
@@ -552,10 +598,26 @@ void ChatDock::receive(const QJsonObject &message)
         fontSize->setValue(settings.value("fontSize").toInt(13));
         overlayLimit->setValue(settings.value("overlayLimit").toInt(8));
         overlaySeconds->setValue(settings.value("overlaySeconds").toInt(25));
+        sharingAutoStart->setChecked(settings.value("sharingAutoStart").toBool());
+        const auto alerts = settings.value("alerts").toObject();
+        alertsEnabled->setChecked(alerts.value("enabled").toBool(true));
+        giftAlerts->setChecked(alerts.value("gifts").toBool(true));
+        followAlerts->setChecked(alerts.value("follows").toBool(true));
+        alertSeconds->setValue(alerts.value("seconds").toInt(5));
+        alertVolume->setValue(alerts.value("volume").toInt(60));
+        const int audioIndex = alertAudio->findData(alerts.value("audio").toString("stream"));
+        alertAudio->setCurrentIndex(audioIndex < 0 ? 1 : audioIndex);
+        configureAlertsSource(false);
         auto font = timeline->font();
         font.setPointSize(fontSize->value());
         timeline->setFont(font);
         if (kind == "snapshot") {
+            activeCombos.clear();
+            for (const auto value : message.value("combos").toArray()) {
+                const auto combo = value.toObject();
+                activeCombos.insert(combo.value("key").toString(), combo.value("event").toObject());
+            }
+            updateComboNotice();
             timeline->clear();
             for (const auto value : message.value("events").toArray()) {
                 addEvent(value.toObject());
@@ -563,6 +625,43 @@ void ChatDock::receive(const QJsonObject &message)
         }
     } else if (kind == "event") {
         addEvent(message.value("event").toObject());
+    } else if (kind == "combo") {
+        const auto key = message.value("key").toString();
+        if (message.value("complete").toBool()) {
+            activeCombos.remove(key);
+        } else {
+            activeCombos.remove(key);
+            activeCombos.insert(key, message.value("event").toObject());
+            while (activeCombos.size() > 8) {
+                activeCombos.erase(activeCombos.begin());
+            }
+        }
+        updateComboNotice();
+    } else if (kind == "sharing") {
+        sharingConsented = message.value("consented").toBool();
+        if (!sharingConsented) {
+            sharingAutoStart->setChecked(false);
+        }
+        sharingStatus->setText(message.value("detail").toString());
+        sharingUrl->setText(message.value("link").toString());
+        sharingStart->setText(sharingConsented ? "Start sharing · same link" : "Enable sharing / generate link");
+        sharingAutoStart->setEnabled(bridgeConnected && sharingConsented);
+        const auto sharingState = message.value("status").toString();
+        sharingStop->setEnabled(bridgeConnected && sharingState != "off" && sharingState != "error");
+        sharingReset->setEnabled(bridgeConnected && sharingConsented);
+        const auto qr = message.value("qr").toString();
+        QPixmap pixmap;
+        if (qr.startsWith("data:image/png;base64,") && qr.size() < 128 * 1024
+            && pixmap.loadFromData(QByteArray::fromBase64(qr.mid(22).toLatin1()), "PNG")) {
+            sharingQr->setPixmap(pixmap.scaled(220, 220, Qt::KeepAspectRatio, Qt::FastTransformation));
+            sharingQr->show();
+        } else {
+            sharingQr->hide();
+        }
+    } else if (kind == "sounds") {
+        const auto names = message.value("names").toObject();
+        giftSound->setText(names.value("gift").toString().isEmpty() ? "Default · Sparkle" : names.value("gift").toString());
+        followSound->setText(names.value("follow").toString().isEmpty() ? "Default · Welcome" : names.value("follow").toString());
     } else if (kind == "profile") {
         const auto profile = message.value("user").toObject();
         for (int row = 0; row < timeline->count(); ++row) {
@@ -585,6 +684,8 @@ void ChatDock::receive(const QJsonObject &message)
         timeline->doItemsLayout();
         filter();
     } else if (kind == "clear") {
+        activeCombos.clear();
+        updateComboNotice();
         timeline->clear();
         filter();
     } else if (kind == "state") {
@@ -627,6 +728,13 @@ void ChatDock::receive(const QJsonObject &message)
         broadcasts->setCurrentIndex(index < 0 ? 0 : index);
         if (message.contains("overlayUrl")) {
             overlayUrl->setText(message.value("overlayUrl").toString());
+        }
+        if (message.contains("viewerUrl")) {
+            viewerUrl->setText(message.value("viewerUrl").toString());
+        }
+        if (message.contains("alertsUrl")) {
+            alertsUrl->setText(message.value("alertsUrl").toString());
+            configureAlertsSource(false);
         }
     } else if (kind == "result") {
         const bool success = message.value("ok").toBool();
@@ -706,6 +814,43 @@ void ChatDock::filter()
     emptyState->setText(timeline->count() == 0
         ? "Your chat, in one place\n\nConnect YouTube or TikTok in Accounts.\nNew messages will appear here."
         : "No matching messages\n\nTry another filter or search.");
+    updateComboNotice();
+}
+
+void ChatDock::updateComboNotice()
+{
+    if (activeCombos.isEmpty() || platform->currentText() == "YouTube") {
+        comboNotice->hide();
+        return;
+    }
+    QStringList lines;
+    int count = 0;
+    for (const auto &event : activeCombos) {
+        const auto user = event.value("user").toObject();
+        const auto gift = event.value("monetaryEvent").toObject();
+        const auto name = comboNotice->fontMetrics().elidedText(user.value("displayName").toString(), Qt::ElideRight, 130);
+        const auto giftName = comboNotice->fontMetrics().elidedText(gift.value("giftName").toString("Gift"), Qt::ElideRight, 100);
+        lines.append(QString("%1 · %2 ×%3\nกำลังคอมโบ · Combo in progress")
+            .arg(name, giftName, gift.value("quantity").toVariant().toString()));
+        if (++count >= 3) {
+            break;
+        }
+    }
+    comboNotice->setFixedWidth(qMin(260, qMax(80, timeline->viewport()->width() - 16)));
+    comboNotice->setText(lines.join("\n"));
+    comboNotice->adjustSize();
+    comboNotice->move(qMax(8, timeline->viewport()->width() - comboNotice->width() - 8),
+        qMax(8, timeline->viewport()->height() - comboNotice->height() - 8));
+    comboNotice->show();
+    comboNotice->raise();
+}
+
+bool ChatDock::eventFilter(QObject *object, QEvent *event)
+{
+    if (object == timeline->viewport() && event->type() == QEvent::Resize) {
+        updateComboNotice();
+    }
+    return QWidget::eventFilter(object, event);
 }
 
 void ChatDock::shutdown()

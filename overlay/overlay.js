@@ -39,6 +39,32 @@ function clear() {
   }
 }
 
+function leave(element) {
+  if (!element.isConnected || element.classList.contains('leaving')) {
+    return;
+  }
+  clearTimeout(timers.get(element));
+  element.classList.add('leaving');
+  const animation = element.getAnimations().find(item => item.animationName === 'exit');
+  if (animation) {
+    void animation.finished.then(() => remove(element)).catch(() => {});
+  }
+  timers.set(element, setTimeout(() => remove(element), 750));
+}
+
+function setAuthor(element, name, username) {
+  const author = element.querySelector('.author');
+  const handle = username && username !== name
+    ? `(${username.startsWith('@') ? '' : '@'}${username})` : '';
+  const displayName = document.createElement('span');
+  displayName.className = 'display-name';
+  displayName.textContent = name;
+  const usernameElement = document.createElement('span');
+  usernameElement.className = 'handle';
+  usernameElement.textContent = handle;
+  author.replaceChildren(displayName, usernameElement);
+}
+
 function display(event) {
   const key = `${event.platform}:${event.id}`;
   if (seen.has(key) || Date.now() - event.timestamp > settings.overlaySeconds * 1000) {
@@ -54,13 +80,24 @@ function display(event) {
   element.className = `message ${platform} ${type}`;
   const author = document.createElement('span');
   author.className = 'author';
-  const handle = event.user.username && event.user.username !== event.user.displayName
-    ? ` (${event.user.username.startsWith('@') ? '' : '@'}${event.user.username})` : '';
-  author.textContent = `${platform === 'youtube' ? 'YouTube' : 'TikTok'} · ${event.user.displayName}${handle}`;
+  const meta = document.createElement('span');
+  meta.className = 'meta';
+  const platformBadge = document.createElement('span');
+  platformBadge.className = 'platform-badge';
+  platformBadge.textContent = platform === 'youtube' ? 'YouTube' : 'TikTok';
+  const time = document.createElement('time');
+  time.textContent = new Date(event.timestamp).toLocaleTimeString();
+  meta.append(platformBadge, time);
   if (event.user.avatarUrl) {
-    author.prepend(mediaImage(event.user.avatarUrl, '', 'avatar'));
+    element.append(mediaImage(event.user.avatarUrl, '', 'avatar'));
+  } else {
+    const avatar = document.createElement('span');
+    avatar.className = 'avatar initials';
+    avatar.textContent = event.user.displayName.slice(0, 1);
+    element.append(avatar);
   }
   const body = document.createElement('span');
+  body.className = 'message-body';
   if (event.messageParts?.length) {
     for (const part of event.messageParts) {
       body.append(part.type === 'image' ? mediaImage(part.url, part.alt, 'emoji') : document.createTextNode(part.text));
@@ -68,16 +105,23 @@ function display(event) {
   } else {
     body.textContent = event.message ?? '';
   }
-  element.append(author, body);
+  element.append(author, meta, body);
+  setAuthor(element, event.user.displayName, event.user.username);
+  const giftDetails = document.createElement('div');
+  giftDetails.className = 'gift-details';
   if (event.media?.imageUrl) {
-    element.append(mediaImage(event.media.imageUrl, 'Gift', 'gift-art'));
+    giftDetails.append(mediaImage(event.media.imageUrl, 'Gift', 'gift-art'));
   }
   if (event.monetaryEvent) {
     const money = document.createElement('div');
     const value = event.monetaryEvent;
     money.textContent = value.giftName ? `${value.giftName} ×${value.quantity ?? 1}`
       : `${value.amount ?? ''} ${value.currency ?? ''}`;
-    element.append(money);
+    money.className = 'gift-label';
+    giftDetails.append(money);
+  }
+  if (giftDetails.childNodes.length) {
+    element.append(giftDetails);
   }
   element.dataset.timestamp = String(event.timestamp);
   element.dataset.platform = platform;
@@ -86,15 +130,19 @@ function display(event) {
   element.dataset.username = event.user.username;
   const later = [...container.children].find(child => Number(child.dataset.timestamp) > event.timestamp);
   container.insertBefore(element, later ?? null);
-  while (container.children.length > settings.overlayLimit) {
+  const visible = [...container.children].filter(child => !child.classList.contains('leaving'));
+  while (visible.length > settings.overlayLimit) {
+    leave(visible.shift());
+  }
+  // Keep exits bounded during a burst while letting normal removals finish.
+  while (container.children.length > settings.overlayLimit + 4) {
     remove(container.firstElementChild);
   }
   if (element.isConnected) {
     const lifetime = Math.max(0, settings.overlaySeconds * 1000 - (Date.now() - event.timestamp));
-    timers.set(element, setTimeout(() => {
-      element.classList.add('leaving');
-      timers.set(element, setTimeout(() => remove(element), 400));
-    }, lifetime));
+    if (!element.classList.contains('leaving')) {
+      timers.set(element, setTimeout(() => leave(element), lifetime));
+    }
   }
 }
 
@@ -121,15 +169,9 @@ function connect() {
           }
           element.dataset.displayName = message.user.displayName ?? element.dataset.displayName;
           element.dataset.username = message.user.username ?? element.dataset.username;
-          const author = element.querySelector('.author');
-          const avatar = author.querySelector('img.avatar');
           const name = element.dataset.displayName;
           const username = element.dataset.username;
-          const handle = username && username !== name ? ` (${username.startsWith('@') ? '' : '@'}${username})` : '';
-          author.textContent = `YouTube · ${name}${handle}`;
-          if (avatar) {
-            author.prepend(avatar);
-          }
+          setAuthor(element, name, username);
         }
       } else if (message.kind === 'settings') {
         settings = message.settings;

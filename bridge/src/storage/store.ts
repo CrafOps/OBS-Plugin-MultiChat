@@ -78,4 +78,21 @@ export class Store {
   async clearCredentials(): Promise<void> {
     await rm(join(this.directory, 'youtube.dpapi'), { force: true });
   }
+
+  async saveSharing(value: unknown): Promise<void> {
+    const encrypted = await dpapi(Buffer.from(JSON.stringify(value)).toString('base64'), false);
+    await this.atomic('sharing.dpapi', encrypted);
+  }
+
+  async loadSharing(): Promise<unknown> {
+    try {
+      const data = await readFile(join(this.directory, 'sharing.dpapi'), 'utf8');
+      return JSON.parse(Buffer.from(await dpapi(data, true), 'base64').toString('utf8'));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return undefined;
+      }
+      throw new Error('Saved sharing keys could not be opened; keys were not reset');
+    }
+  }
 }

@@ -33,6 +33,12 @@ static void frontendEvent(enum obs_frontend_event event, void *)
     if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING && !dock) {
         createDock();
     }
+    if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING && dock) {
+        dock->refreshAlertsSource();
+    }
+    if (event == OBS_FRONTEND_EVENT_SCENE_COLLECTION_CHANGED && dock) {
+        dock->refreshAlertsSource();
+    }
     if (event == OBS_FRONTEND_EVENT_EXIT && dock) {
         dock->shutdown();
     }

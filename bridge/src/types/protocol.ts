@@ -32,6 +32,14 @@ export const eventSchema = z.object({
 });
 
 export type ChatEvent = z.infer<typeof eventSchema>;
+export const alertSettingsSchema = z.object({
+  enabled: z.boolean().default(true),
+  gifts: z.boolean().default(true),
+  follows: z.boolean().default(true),
+  seconds: z.number().int().min(2).max(15).default(5),
+  volume: z.number().int().min(0).max(100).default(60),
+  audio: z.enum(['off', 'stream', 'monitor', 'both']).default('stream')
+});
 export type PlatformState = {
   status: 'disconnected' | 'connecting' | 'connected' | 'offline' | 'error';
   detail: string;
@@ -42,6 +50,8 @@ export type PlatformState = {
 };
 
 export const settingsSchema = z.object({
+  alerts: alertSettingsSchema.prefault({}),
+  sharingAutoStart: z.boolean().default(false),
   tiktokUsername: z.string().trim().transform(value => value.replace(/^@/, ''))
     .pipe(z.string().regex(/^[\w.]{0,64}$/, 'TikTok username must contain only letters, numbers, underscores or dots'))
     .default(''),
@@ -53,7 +63,7 @@ export const settingsSchema = z.object({
   overlayLimit: z.number().int().min(1).max(50).default(8),
   overlaySeconds: z.number().int().min(5).max(300).default(25),
   blockedWords: z.array(z.string().min(1).max(80)).max(100).default([]),
-  enabledTypes: z.array(eventSchema.shape.type).default(['message', 'gift', 'superchat', 'membership']),
+  enabledTypes: z.array(eventSchema.shape.type).default(['message', 'gift', 'superchat', 'membership', 'follow']),
   youtubeBroadcastId: z.string().max(128).default(''),
   youtubeLiveUrl: z.string().trim().max(2048)
     .refine(value => value === '' || youtubeVideoId(value) !== undefined, 'Enter a valid YouTube video ID or URL')

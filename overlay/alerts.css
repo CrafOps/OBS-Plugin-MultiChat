@@ -1,0 +1,153 @@
+:root {
+  font-family: "Segoe UI", Tahoma, sans-serif;
+  color: #f5f3ff;
+  color-scheme: dark;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+}
+#alert {
+  position: absolute;
+  left: 20px;
+  top: 20px;
+  width: min(720px, calc(100vw - 40px));
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 22px;
+  border-radius: 20px;
+  background: linear-gradient(115deg, #2e2338f5, #141e2ef5);
+  border: 2px solid #d9aa68;
+  box-shadow: 0 10px 24px #0005;
+  animation: arrive 550ms cubic-bezier(.22, .61, .36, 1) both;
+}
+#alert.follow {
+  border-color: #6bdfd6;
+  background: linear-gradient(115deg, #153636f5, #141e2ef5);
+}
+#art {
+  width: 96px;
+  flex-shrink: 0;
+  font-size: 68px;
+  text-align: center;
+  animation: pop 700ms ease-out;
+}
+#art img {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+}
+.details {
+  flex: 1;
+  min-width: 0;
+}
+.kind {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  color: #ffd49b;
+  font-size: 14px;
+  font-weight: 600;
+}
+.follow .kind {
+  color: #91eee6;
+}
+.brand {
+  color: #a5aec6;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 8px;
+}
+#avatar img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+#name {
+  font-size: clamp(18px, 3vw, 27px);
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+#description {
+  font-size: 19px;
+  color: #e4d6c2;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.progress {
+  height: 3px;
+  margin-top: 15px;
+  background: #e3b87d;
+  transform-origin: left;
+  animation: duration var(--seconds, 5s) linear forwards;
+}
+.follow .progress {
+  background: #6bdfd6;
+}
+#alert.leaving {
+  animation: leave 550ms ease-in-out forwards;
+}
+[hidden] {
+  display: none !important;
+}
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+@keyframes pop {
+  0% {
+    transform: scale(.6) rotate(-8deg);
+  }
+  55% {
+    transform: scale(1.12) rotate(3deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+@keyframes leave {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(.98);
+  }
+}
+@keyframes duration {
+  to {
+    transform: scaleX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #art, .progress {
+    animation: none;
+  }
+  #alert, #alert.leaving {
+    animation-duration: 550ms;
+  }
+}

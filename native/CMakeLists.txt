@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(obs-unified-chat VERSION 0.2.2 LANGUAGES CXX)
+project(obs-unified-chat VERSION 0.3.0 LANGUAGES CXX)
 
 if(NOT WIN32 OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
   message(FATAL_ERROR "This plugin targets Windows x64")
@@ -29,6 +29,8 @@ add_library(obs-unified-chat MODULE
   src/plugin-main.cpp
   src/dock/chat-dock.cpp
   src/dock/chat-dock.hpp
+  src/dock/alert-controls.cpp
+  src/dock/readable-checkbox.hpp
   src/dock/chat-delegate.cpp
   src/dock/chat-delegate.hpp
   src/dock/media-cache.cpp
@@ -53,10 +55,20 @@ if(UNIFIED_CHAT_BUILD_UI_TESTS)
   enable_testing()
   add_executable(native-ui-check
     tests/ui-check.cpp
+    src/dock/chat-dock.cpp
+    src/dock/chat-dock.hpp
+    src/dock/alert-controls.cpp
     src/dock/chat-delegate.cpp
     src/dock/media-cache.cpp
+    src/bridge/bridge-client.cpp
+    src/bridge/bridge-client.hpp
   )
-  target_link_libraries(native-ui-check PRIVATE Qt6::Widgets Qt6::Network Qt6::Concurrent)
+  target_link_libraries(native-ui-check PRIVATE
+    OBS::libobs ${UNIFIED_CHAT_FRONTEND_TARGET}
+    Qt6::Widgets Qt6::Network Qt6::WebSockets Qt6::Concurrent
+  )
+  target_compile_definitions(native-ui-check PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX
+    UNIFIED_CHAT_VERSION="${PROJECT_VERSION}")
   target_compile_options(native-ui-check PRIVATE /W4 /permissive- /utf-8)
   add_test(NAME native-ui-check COMMAND native-ui-check)
   set_tests_properties(native-ui-check PROPERTIES TIMEOUT 30)

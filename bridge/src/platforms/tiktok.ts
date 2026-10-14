@@ -139,10 +139,17 @@ export class TikTokConnector implements LiveConnector {
       ];
       for (const [name, type] of eventTypes) {
         connection.on(name, (data: TikTokData) => {
-          if (generation !== this.generation || type === 'gift' && (data.gift?.type ?? data.giftType) === 1 && !data.repeatEnd) {
+          if (generation !== this.generation) {
             return;
           }
-          this.engine.accept(normalizeTikTok(type, data));
+          const event = normalizeTikTok(type, data);
+          if (type === 'gift' && (data.gift?.type ?? data.giftType) === 1) {
+            this.engine.combo(event, Boolean(data.repeatEnd));
+            if (!data.repeatEnd) {
+              return;
+            }
+          }
+          this.engine.accept(event);
         });
       }
       connection.on(ControlEvent.ERROR, error => {

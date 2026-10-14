@@ -59,6 +59,28 @@ test('normalizes paid YouTube events and TikTok gift streak totals', () => {
   assert.equal(current.user.id, '42');
 });
 
+test('combo progress stays out of history, completes once and expires when a stream drops', () => {
+  let now = 1000;
+  const engine = new ChatEngine(settingsSchema.parse({}), () => now);
+  const packets: { complete: boolean }[] = [];
+  engine.on('combo', packet => packets.push(packet));
+  const gift = normalizeTikTok('gift', { msgId: 'combo', repeatCount: 10, giftName: 'Rose',
+    user: { uniqueId: 'creator' } });
+  engine.combo(gift, false);
+  assert.equal(engine.history.length, 0);
+  assert.equal(engine.combos.size, 1);
+  engine.combo(gift, true);
+  engine.accept(gift);
+  engine.accept(gift);
+  assert.equal(engine.combos.size, 0);
+  assert.equal(engine.history.length, 1);
+  engine.combo({ ...gift, id: 'lost' }, false);
+  now = 17000;
+  engine.expireCombos();
+  assert.equal(engine.combos.size, 0);
+  assert.equal(packets.at(-1)?.complete, true);
+});
+
 test('DPAPI round trip does not store cleartext refresh tokens', { skip: process.platform !== 'win32' }, async () => {
   const directory = await mkdtemp(join(process.cwd(), '.test-data-'));
   try {
