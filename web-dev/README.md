@@ -1,8 +1,8 @@
-# Multi Live Chat - website development preview
+# Multi Live Chat - website source and development
 
 This is a separate React + TypeScript + Vite website. Tailwind CSS handles the
-design; Anime.js handles entrance, scroll and demo animations. It does not change
-the deployed Worker, installed OBS plugin or existing mobile links.
+design; Anime.js handles entrance, scroll and demo animations. Running the dev
+server does not deploy changes or update the installed OBS plugin.
 
 ## Run in VS Code / เปิดใน VS Code
 
@@ -60,11 +60,10 @@ npm.cmd run build
 npm.cmd run preview
 ```
 
-The output is in `dist/`. **Do not copy it into production yet.** The existing
-Worker serves only its current viewer assets. A later reviewed integration must
-add landing/docs routes and asset policies while preserving relay endpoints,
-private-link behavior and key revocation. No merge or deployment is part of this
-preview.
+The output is in `dist/`. Production deployment runs from `hosting/` using
+`npm.cmd run deploy`, which builds this website and uploads the Worker/assets.
+Local preview and hot reload do not automatically deploy, merge master or publish
+an OBS installer.
 
 The OBS overlay and alert files remain on the released implementation. They are
 not replaced by this development website. OBS auto-update is independent of Vite.
@@ -110,3 +109,11 @@ Website guides are curated in `src/data/guides.ts`, with separate `th` and `en`
 content. They do not import the repository's technical Markdown guides.
 Illustrations are React/Tailwind diagrams, explicitly labelled as illustrations,
 not screenshots. Live viewer/overlay migration remains a later hosting change.
+
+## Combined Cloudflare preview
+
+The next-stage local integration is available at `hosting/REACT_PREVIEW.md`.
+It adds `/releases`, `/overlay` and a shared read-only chat reader. Run
+`npm.cmd run dev:react` in `hosting/` and open http://localhost:8788.
+The ordinary website hot-reload workflow on port 5173 remains available.
+Production hosting now builds this React website. The preview and hot-reload workflows remain separate from deployment.

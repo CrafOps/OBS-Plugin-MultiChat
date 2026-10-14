@@ -8,9 +8,11 @@
     "assets": "node prepare-assets.mjs",
     "types": "npm run assets && wrangler types",
     "check": "npm run assets && tsc --noEmit",
-    "build": "npm run assets && wrangler deploy --dry-run --outdir ../build/worker",
+    "build": "npm run assets && node prepare-react.mjs --production && wrangler deploy --dry-run --outdir ../build/worker",
     "dev": "npm run assets && wrangler dev --config wrangler.local.jsonc",
-    "deploy": "npm run assets && wrangler deploy"
+    "dev:react": "npm run assets && node prepare-react.mjs && wrangler dev --config wrangler.react.local.jsonc",
+    "build:react": "npm run assets && node prepare-react.mjs && wrangler deploy --dry-run --config wrangler.react.local.jsonc --outdir ../build/react-worker",
+    "deploy": "npm run check && node prepare-react.mjs --production && wrangler deploy"
   },
   "dependencies": {
     "zod": "^4.1.0"

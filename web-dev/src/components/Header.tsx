@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { ExternalLink, Menu, Star, X } from 'lucide-react';
 import { repository, type Language } from '../data/project';
 import { ProjectContext } from '../utils/context';
@@ -37,15 +37,9 @@ export default function Header({
       >
         {language === 'en' ? 'Viewer demo' : 'ทดลอง Viewer'}
       </NavLink>
-      <a
-        href={`${repository}/releases`}
-        className="text-white/55 hover:text-white"
-        target="_blank"
-        rel="noreferrer"
-      >
-        {language === 'th' ? 'ประวัติรุ่น' : 'Changelog'}{' '}
-        <ExternalLink size={11} className="inline" />
-      </a>
+      <Link to="/releases" className="text-white/55 hover:text-white">
+        {language === 'th' ? 'ดาวน์โหลด / รุ่นล่าสุด' : 'Downloads / releases'}
+      </Link>
     </>
   );
   return (

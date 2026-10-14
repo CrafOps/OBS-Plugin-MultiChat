@@ -215,6 +215,30 @@ export default {
       if (request.method !== 'GET' && request.method !== 'HEAD') {
         return json({ error: 'Method not allowed' }, 405);
       }
+      if (String(env.WEB_FRONTEND) === 'react') {
+        const pages = ['/', '/viewer', '/overlay', '/docs', '/releases'];
+        const isPage = pages.includes(url.pathname)
+          || /^\/docs\/[a-z-]+$/.test(url.pathname);
+        const isAsset = /^\/assets\/[a-zA-Z0-9._-]+$/.test(url.pathname);
+        if (url.pathname === '/viewer.html') {
+          return Response.redirect(new URL('/viewer', url).href, 307);
+        }
+        if (!isPage && !isAsset) {
+          return json({ error: 'Not found' }, 404);
+        }
+        if (isPage) {
+          url.pathname = '/index.html';
+        }
+        const asset = await env.ASSETS.fetch(new Request(url, request));
+        const result = new Response(asset.body, asset);
+        // Private links may enter the SPA from any route. Do not inject analytics
+        // scripts that could observe URL fragments before the reader clears them.
+        result.headers.set('Cache-Control', isAsset ? 'public, max-age=31536000, immutable' : 'no-store, no-transform');
+        result.headers.set('Referrer-Policy', 'no-referrer');
+        result.headers.set('X-Content-Type-Options', 'nosniff');
+        result.headers.set('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self' https://api.github.com; img-src https:; frame-ancestors 'none'; base-uri 'none'");
+        return result;
+      }
       if (url.pathname === '/' || url.pathname === '/viewer') {
         url.pathname = '/viewer.html';
       }

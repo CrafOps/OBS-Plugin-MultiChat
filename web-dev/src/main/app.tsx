@@ -11,6 +11,8 @@ import Footer from '../components/Footer';
 const Home = lazy(() => import('./pages/Home'));
 const Docs = lazy(() => import('./pages/Docs'));
 const Viewer = lazy(() => import('./pages/Viewer'));
+const Overlay = lazy(() => import('./pages/Overlay'));
+const Releases = lazy(() => import('./pages/Releases'));
 
 export default function App() {
   const info = useProjectInfo();
@@ -43,7 +45,9 @@ export default function App() {
         >
           Skip to content
         </a>
-        <Header language={language} setLanguage={setLanguage} />
+        {location.pathname !== '/overlay' && (
+          <Header language={language} setLanguage={setLanguage} />
+        )}
         <main id="main">
           <Suspense
             fallback={
@@ -57,6 +61,8 @@ export default function App() {
               <Route path="/docs" element={<Docs />} />
               <Route path="/docs/:slug" element={<Docs />} />
               <Route path="/viewer" element={<Viewer />} />
+              <Route path="/overlay" element={<Overlay />} />
+              <Route path="/releases" element={<Releases />} />
               <Route
                 path="*"
                 element={
@@ -71,7 +77,7 @@ export default function App() {
             </Routes>
           </Suspense>
         </main>
-        <Footer />
+        {location.pathname !== '/overlay' && <Footer />}
       </ProjectContext.Provider>
     </LanguageContext.Provider>
   );
