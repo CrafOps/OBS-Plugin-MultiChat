@@ -18,6 +18,13 @@ const item: ChatItem = {
 test('normalizes public text, emoji, badges and paid display without guessing currency', () => {
   const normalized = normalizePublicYouTube(item);
   assert.equal(normalized.message, 'สวัสดี:smile:');
+  assert.deepEqual(normalized.messageParts?.[1], { type: 'text', text: ':smile:' });
+  const namedEmoji = normalizePublicYouTube({
+    ...item,
+    message: [{ text: 'Hi ' }, { url: 'https://example.com/emoji.png', alt: 'hellocatmeow',
+      emojiText: 'hellocatmeow', isCustomEmoji: true }]
+  });
+  assert.equal(namedEmoji.message, 'Hi :hellocatmeow:');
   assert.equal(normalized.type, 'message');
   assert.deepEqual(normalized.user.badges, ['Moderator', 'Member']);
   const paid = normalizePublicYouTube({ ...item, superchat: { amount: '฿100.00', color: '#000' } });

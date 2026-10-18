@@ -120,17 +120,46 @@ local chat and local alerts remain usable.
 
 ## Chat overlay CSS / CSS ของแชทบนสตรีม
 
-The Browser Source chat overlay now includes a lavender bubble theme inspired by
-the supplied YouTube chatbox. It supports both platforms, avatars, emoji and gifts
-without downloading web fonts. Use the local overlay URL from Settings as usual.
-For your own colors, paste `overlay/overlay.css` from the package into the Browser
-Source's Custom CSS and change the variables at the top. Clear old Custom CSS to
-see the included theme; existing overrides take precedence over the bundled file.
+The Browser Source chat overlay uses a compact TikTok-style feed with clear
+platform labels, profiles, emoji and gift details. Use the local overlay URL from Settings as usual.
+To restyle it, open **Settings → Browser Source overlay → Custom CSS** in the dock.
+Add CSS rules and save; the overlay updates without replacing its Browser Source.
+The editor accepts up to 6,000 characters. Leave it empty to restore the default
+theme.
 
-หน้าแชทสำหรับ Browser Source ใช้ธีมกล่องข้อความม่วงอ่อน พร้อมชื่อผู้ส่ง รูปโปรไฟล์
-อีโมจิ และของขวัญทั้งสองแพลตฟอร์ม ใช้ URL overlay ใน Settings ได้เลย
-ถ้าต้องการปรับสีเอง ให้นำไฟล์ `overlay/overlay.css` ในชุดติดตั้งไปใส่ช่อง Custom CSS
-แล้วแก้ตัวแปรด้านบน หากมี CSS เก่าค้างอยู่ ให้ล้างก่อนเพื่อเห็นธีมใหม่
+Useful selectors include `.message`, `.display-name`, `.handle`, `.meta`,
+`.platform-badge`, `.message-body`, `.avatar`, and `.gift-details`. For example:
+
+```css
+.message {
+  background: #17131f;
+  border-radius: 18px;
+}
+
+.display-name {
+  color: #d6b8ff;
+}
+```
+
+หน้าแชทสำหรับ Browser Source ใช้รูปแบบแชทเรียบกะทัดรัดคล้าย TikTok พร้อมชื่อผู้ส่ง
+รูปโปรไฟล์ อีโมจิ และรายละเอียดของขวัญ ใช้ URL overlay ใน Settings ได้เลย หากต้องการปรับหน้าตา ให้เปิด
+**Settings → Browser Source overlay → Custom CSS** ใน dock แล้วเขียน CSS จากนั้นกด
+บันทึก overlay จะอัปเดตโดยไม่ต้องเปลี่ยน Browser Source ช่องนี้รับได้สูงสุด 6,000
+ตัวอักษร และลบ CSS ออกเพื่อกลับไปใช้ธีมเริ่มต้น
+
+คลาสที่ใช้ปรับแต่งได้ เช่น `.message`, `.display-name`, `.handle`, `.meta`,
+`.platform-badge`, `.message-body`, `.avatar` และ `.gift-details` ตัวอย่าง:
+
+```css
+.message {
+  background: #17131f;
+  border-radius: 18px;
+}
+
+.display-name {
+  color: #d6b8ff;
+}
+```
 
 Default gift sound: Sparkle (three ascending chimes).
 Default follow sound: Welcome (two soft chimes).

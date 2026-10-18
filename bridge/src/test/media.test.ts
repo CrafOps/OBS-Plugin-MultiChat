@@ -29,7 +29,7 @@ test('TikTok preserves profile, inline emote and gift image without requiring ca
   assert.equal(emote.messageParts?.filter(part => part.type === 'text').map(part => part.text).join(''), 'Hi there');
 });
 
-test('YouTube preserves image emojis, profile and sticker, with safe text fallback', () => {
+test('YouTube renders custom emoji names as text and preserves profile and sticker media', () => {
   const event = normalizePublicYouTube({
     id: 'youtube-media', author: { name: 'Viewer', channelId: 'channel',
       thumbnail: { url: 'https://yt3.ggpht.com/profile.png', alt: '' } },
@@ -38,7 +38,7 @@ test('YouTube preserves image emojis, profile and sticker, with safe text fallba
     superchat: { amount: '$5', color: '#000', sticker: { url: 'https://yt3.ggpht.com/sticker.gif', alt: '' } },
     isMembership: false, isVerified: false, isModerator: false, isOwner: false, timestamp: new Date()
   });
-  assert.equal(event.messageParts?.[1]?.type, 'image');
+  assert.deepEqual(event.messageParts?.[1], { type: 'text', text: ':smile:' });
   assert.equal(event.media?.imageUrl, 'https://yt3.ggpht.com/sticker.gif');
   assert.equal(eventSchema.safeParse(event).success, true);
   assert.equal(eventSchema.safeParse({ ...event, media: { imageUrl: 'https://localhost/private' } }).success, false);

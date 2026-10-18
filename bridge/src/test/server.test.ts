@@ -79,7 +79,11 @@ test('local bridge authenticates controls, restricts overlay and shuts down', { 
     const overlay = new WebSocket(`ws://127.0.0.1:${port}/events?token=${new URL(overlayUrl).hash.slice(1)}`, { origin });
     sockets.push(overlay);
     const snapshot = await packet(overlay);
-    assert.deepEqual(Object.keys(snapshot.settings as object).sort(), ['overlayLimit', 'overlaySeconds']);
+    assert.deepEqual(Object.keys(snapshot.settings as object).sort(), [
+      'overlayCustomCss',
+      'overlayLimit',
+      'overlaySeconds'
+    ]);
     assert.equal(snapshot.youtube, undefined);
     const alertSocket = new WebSocket(`ws://127.0.0.1:${port}/events?mode=alerts&token=${new URL(overlayUrl).hash.slice(1)}`, { origin });
     sockets.push(alertSocket);

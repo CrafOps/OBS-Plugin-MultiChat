@@ -62,6 +62,7 @@ export const settingsSchema = z.object({
   fontSize: z.number().int().min(10).max(28).default(13),
   overlayLimit: z.number().int().min(1).max(50).default(8),
   overlaySeconds: z.number().int().min(5).max(300).default(25),
+  overlayCustomCss: z.string().max(6000).default(''),
   blockedWords: z.array(z.string().min(1).max(80)).max(100).default([]),
   enabledTypes: z.array(eventSchema.shape.type).default(['message', 'gift', 'superchat', 'membership', 'follow']),
   youtubeBroadcastId: z.string().max(128).default(''),

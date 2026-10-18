@@ -47,7 +47,11 @@ function authorized(candidate: string | undefined, expected: string): boolean {
 }
 
 function overlaySettings() {
-  return { overlayLimit: engine.settings.overlayLimit, overlaySeconds: engine.settings.overlaySeconds };
+  return {
+    overlayLimit: engine.settings.overlayLimit,
+    overlaySeconds: engine.settings.overlaySeconds,
+    overlayCustomCss: engine.settings.overlayCustomCss
+  };
 }
 
 function alertSettings() {
@@ -141,7 +145,11 @@ for (const [route, filename, contentType] of [
   ['/alert-queue.mjs', 'alert-queue.mjs', 'application/javascript; charset=utf-8']
 ] as const) {
   app.get(route, async (_request, reply) => {
-    reply.header('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src https:; frame-ancestors 'none'");
+    const stylePolicy = route === '/overlay'
+      ? "style-src 'self' 'unsafe-inline'"
+      : "style-src 'self'";
+    const imagePolicy = route === '/overlay' ? "img-src https: data:" : "img-src https:";
+    reply.header('Content-Security-Policy', `default-src 'none'; script-src 'self'; ${stylePolicy}; connect-src 'self'; ${imagePolicy}; frame-ancestors 'none'`);
     return reply.type(contentType).send(await readFile(join(overlayDirectory, filename), 'utf8'));
   });
 }

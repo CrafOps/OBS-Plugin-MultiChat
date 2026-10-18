@@ -1,20 +1,23 @@
 import { EventEmitter } from 'node:events';
-import { LiveChat, type ChatItem } from 'youtube-chat-next';
+import { LiveChat, type ChatItem, type EmojiItem } from 'youtube-chat-next';
 import type { ChatEngine } from '../services/engine.js';
 import type { ChatEvent, PlatformState } from '../types/protocol.js';
 import { safeMediaUrl } from '../types/media.js';
 import { ChannelNames, publicPage, watchMetadata } from './youtube-metadata.js';
 
 export function normalizePublicYouTube(item: ChatItem): ChatEvent {
-  const text = item.message.map(part => 'text' in part ? part.text : part.emojiText || part.alt).join('');
+  const text = item.message.map(part => 'text' in part ? part.text : emojiText(part)).join('');
   const paid = item.superchat?.amount;
   const parts: NonNullable<ChatEvent['messageParts']> = item.message.map(part => {
     if ('text' in part) {
       return { type: 'text', text: part.text };
     }
+    const label = emojiText(part);
+    if (part.isCustomEmoji) {
+      return { type: 'text', text: label };
+    }
     const url = safeMediaUrl(part.url);
-    const alt = part.emojiText || part.alt;
-    return url ? { type: 'image', url, alt } : { type: 'text', text: alt };
+    return url ? { type: 'image', url, alt: label } : { type: 'text', text: label };
   });
   if (paid) {
     parts.push({ type: 'text', text: `${text ? ' · ' : ''}${paid}` });
@@ -38,6 +41,14 @@ export function normalizePublicYouTube(item: ChatItem): ChatEvent {
     messageParts: parts.slice(0, 128),
     media: sticker ? { imageUrl: sticker } : undefined
   };
+}
+
+function emojiText(part: EmojiItem): string {
+  const label = part.emojiText || part.alt;
+  if (!part.isCustomEmoji || !label || /^:.+:$/.test(label) || !/^[\w.-]+$/.test(label)) {
+    return label;
+  }
+  return `:${label}:`;
 }
 
 export type PublicChatClient = EventEmitter & {
