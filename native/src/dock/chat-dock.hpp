@@ -9,6 +9,7 @@
 #include <QCheckBox>
 #include <QPushButton>
 #include <QSpinBox>
+#include <QPlainTextEdit>
 #include <QTimer>
 #include <QMap>
 #include "../bridge/bridge-client.hpp"
@@ -86,6 +87,7 @@ private:
     QSpinBox *fontSize;
     QSpinBox *overlayLimit;
     QSpinBox *overlaySeconds;
+    QPlainTextEdit *overlayCustomCss;
     QPushButton *sendButton;
     QTimer sendTimeout;
     QString pendingReply;

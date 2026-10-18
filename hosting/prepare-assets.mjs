@@ -1,6 +1,7 @@
 import { mkdir, copyFile, readFile, writeFile } from 'node:fs/promises';
 
 await mkdir(new URL('./public/', import.meta.url), { recursive: true });
+await mkdir(new URL('./react-public/', import.meta.url), { recursive: true });
 for (const name of ['viewer.html', 'viewer.js', 'viewer.css']) {
   await copyFile(new URL(`../overlay/${name}`, import.meta.url), new URL(`./public/${name}`, import.meta.url));
 }
@@ -11,4 +12,7 @@ for (const name of ['protocol.ts', 'media.ts', 'youtube-target.ts']) {
 const configuration = JSON.parse(await readFile(new URL('./wrangler.jsonc', import.meta.url), 'utf8'));
 delete configuration.routes;
 configuration.vars.PUBLIC_ORIGIN = 'http://localhost:8787';
+configuration.vars.WEB_FRONTEND = 'legacy';
+configuration.assets.directory = './public';
 await writeFile(new URL('./wrangler.local.jsonc', import.meta.url), JSON.stringify(configuration, null, 2));
+

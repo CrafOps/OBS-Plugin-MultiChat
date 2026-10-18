@@ -13,3 +13,5 @@ hosting/public/
 hosting/wrangler.local.jsonc
 hosting/src/generated/
 .wrangler/
+hosting/react-public/
+hosting/wrangler.react.local.jsonc

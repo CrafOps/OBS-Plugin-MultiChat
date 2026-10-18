@@ -2,17 +2,73 @@
 
 const container = document.getElementById('messages');
 const token = location.hash.slice(1);
+const parameters = new URLSearchParams(location.search);
+const demoMode = parameters.get('demo') === '1';
+const previewCss = parameters.get('css');
 history.replaceState(null, '', location.pathname);
 let settings = { overlayLimit: 8, overlaySeconds: 25 };
+const customStyle = document.createElement('style');
+customStyle.id = 'user-overlay-css';
+document.head.append(customStyle);
 let socket;
 let retry = 1000;
 const seen = new Set();
 const timers = new Map();
 
+function showDemo() {
+  document.body.classList.add('demo-mode');
+  const now = Date.now();
+  const roseGift = demoSvg(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
+      + '<path d="M32 37v19M32 48c-8-9-16-5-15 1 5 5 11 4 15-1Zm0-5c8-9 16-5 15 1-5 5-11 4-15-1Z" fill="#42c58a"/>'
+      + '<path d="M32 34c-4-4-11-10-7-16 2-3 6-2 7 1 2-5 8-5 10 0 3 7-5 12-10 15Z" fill="#fa527f"/>'
+      + '<path d="M31 26c-5-4-4-10 1-10 5 0 6 5 1 8 7-2 10 3 6 7-4 3-8-1-8-5Z" fill="#ff8cab"/>'
+      + '<circle cx="32" cy="32" r="29" fill="none" stroke="#ffffff" stroke-opacity=".7" stroke-width="2"/>'
+      + '</svg>'
+  );
+  const examples = [
+    {
+      id: 'preview-youtube-1',
+      platform: 'youtube',
+      type: 'message',
+      timestamp: now - 18000,
+      user: { id: 'preview-1', displayName: 'Ploy', username: 'ployplays' },
+      message: 'Welcome to the stream :hellocatmeow:',
+      messageParts: [
+        { type: 'text', text: 'Welcome to the stream :hellocatmeow:' }
+      ]
+    },
+    {
+      id: 'preview-tiktok-1',
+      platform: 'tiktok',
+      type: 'message',
+      timestamp: now - 11000,
+      user: { id: 'preview-2', displayName: 'Mika', username: 'mikastreams' },
+      message: 'The new chat layout looks great!'
+    },
+    {
+      id: 'preview-tiktok-2',
+      platform: 'tiktok',
+      type: 'gift',
+      timestamp: now - 4000,
+      user: { id: 'preview-3', displayName: 'Kai', username: 'kaiplays' },
+      message: '',
+      media: { imageUrl: roseGift },
+      monetaryEvent: { giftName: 'Rose', quantity: 10 }
+    }
+  ];
+  examples.forEach(display);
+}
+
+function demoSvg(source) {
+  return `data:image/svg+xml,${encodeURIComponent(source)}`;
+}
+
 function mediaImage(url, alt, className) {
   try {
     const parsed = new URL(url);
-    if (parsed.protocol !== 'https:') {
+    const isDemoImage = demoMode && url.startsWith('data:image/svg+xml,');
+    if (parsed.protocol !== 'https:' && !isDemoImage) {
       return document.createTextNode(alt);
     }
   } catch {
@@ -146,6 +202,13 @@ function display(event) {
   }
 }
 
+function applySettings(value) {
+  settings = value;
+  customStyle.textContent = typeof value.overlayCustomCss === 'string'
+    ? value.overlayCustomCss.slice(0, 6000)
+    : '';
+}
+
 function connect() {
   if (!token) {
     return;
@@ -158,7 +221,7 @@ function connect() {
     try {
       const message = JSON.parse(data);
       if (message.kind === 'snapshot') {
-        settings = message.settings;
+        applySettings(message.settings);
         message.events.forEach(display);
       } else if (message.kind === 'event') {
         display(message.event);
@@ -174,7 +237,7 @@ function connect() {
           setAuthor(element, name, username);
         }
       } else if (message.kind === 'settings') {
-        settings = message.settings;
+        applySettings(message.settings);
       } else if (message.kind === 'clear') {
         clear();
       }
@@ -189,3 +252,10 @@ function connect() {
 }
 
 connect();
+
+if (demoMode) {
+  if (previewCss) {
+    customStyle.textContent = previewCss.slice(0, 6000);
+  }
+  showDemo();
+}

@@ -1,13 +1,14 @@
-/* Multi Live Chat — shared lavender theme for YouTube and TikTok.
-   Change these variables in OBS Custom CSS to customize the theme. */
+/* Compact live-chat feed. Override these styles in OBS Settings. */
 :root {
-  --chat-accent: #a879e8;
-  --chat-text: #482071;
-  --chat-surface: #f4eaff;
+  --chat-accent: #25f4ee;
+  --chat-text: #ffffff;
+  --chat-surface: rgb(0 0 0 / 56%);
+  --chat-muted: rgb(255 255 255 / 72%);
   --chat-font-size: 18px;
-  --chat-radius: 16px;
-  font-family: Nunito, 'Segoe UI', Tahoma, sans-serif;
+  --chat-radius: 12px;
+  font-family: Inter, 'Segoe UI', Tahoma, sans-serif;
   font-size: var(--chat-font-size);
+  color-scheme: dark;
 }
 
 * {
@@ -20,22 +21,33 @@ html, body {
   overflow: hidden;
 }
 
+body.demo-mode {
+  min-height: 100vh;
+  background: #455158;
+}
+
+body.demo-mode #messages {
+  min-height: 100vh;
+}
+
 #messages {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 14px;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 10px;
 }
 
 .message {
   position: relative;
-  padding: 14px 16px 14px 66px;
-  border: 1px solid #bca1e885;
+  width: min(100%, 760px);
+  padding: 9px 12px 9px 50px;
+  border: 0;
   border-radius: var(--chat-radius);
-  background: #231a36f5;
-  box-shadow: 0 4px 12px #16082a40;
+  background: var(--chat-surface);
   overflow-wrap: anywhere;
-  animation: enter 400ms ease-out both;
+  animation: enter 240ms ease-out both;
+  backdrop-filter: blur(3px);
 }
 
 .author {
@@ -43,7 +55,7 @@ html, body {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 2px 7px;
-  color: #ffffff;
+  color: var(--chat-text);
   line-height: 1.4;
 }
 
@@ -52,7 +64,7 @@ html, body {
 }
 
 .handle {
-  color: #d2c4e9;
+  color: var(--chat-muted);
   font-size: .75em;
   font-weight: 400;
 }
@@ -61,47 +73,52 @@ html, body {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  margin: 6px 0 10px;
-  color: #d2c4e9;
-  font-size: .65em;
+  gap: 6px;
+  margin: 3px 0 5px;
+  color: var(--chat-muted);
+  font-size: .62em;
 }
 
 .platform-badge {
-  padding: 3px 8px;
-  border-radius: 6px;
-  background: #c0293d;
-  color: #ffffff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgb(255 255 255 / 14%);
+  color: var(--chat-text);
   font-weight: 700;
   line-height: 1.2;
 }
 
 .tiktok .platform-badge {
-  background: #83ebe2;
-  color: #143534;
+  background: rgb(37 244 238 / 22%);
+  color: #b8fffc;
+}
+
+.youtube .platform-badge {
+  background: rgb(255 65 85 / 24%);
+  color: #ffd5da;
 }
 
 .message-body {
   display: block;
-  padding: 10px 13px;
-  border: 1px solid #c8a6f0;
-  border-radius: 11px;
-  background: linear-gradient(145deg, #fcf8ff, var(--chat-surface));
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--chat-text);
-  line-height: 1.5;
+  line-height: 1.42;
   white-space: pre-wrap;
 }
 
 .avatar {
   position: absolute;
-  top: 14px;
-  left: 14px;
-  width: 38px;
-  height: 38px;
-  border: 2px solid #eee2ff;
+  top: 9px;
+  left: 10px;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgb(255 255 255 / 55%);
   border-radius: 50%;
   object-fit: cover;
-  background: #8252c7;
+  background: var(--chat-accent);
 }
 
 .initials {
@@ -112,21 +129,20 @@ html, body {
 }
 
 .gift .message-body, .superchat .message-body, .membership .message-body {
-  background: linear-gradient(135deg, #fff7dd, #f4eaff);
-  border-color: #d6a852;
+  color: #fff5dc;
 }
 
 .gift-details {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 10px;
-  color: #ffe4ab;
+  gap: 7px;
+  margin-top: 5px;
+  color: #ffe39c;
 }
 
 .gift-art {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
 }
 
@@ -142,15 +158,47 @@ html, body {
   object-fit: contain;
 }
 
-/* Replace entry forwards fill instead of trying to transition underneath it. */
+.gift .gift-details,
+.superchat .gift-details,
+.membership .gift-details {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  width: fit-content;
+  max-width: 100%;
+}
+
+@media (max-width: 480px) {
+  :root {
+    --chat-font-size: 16px;
+  }
+
+  #messages {
+    gap: 5px;
+    padding: 8px;
+  }
+
+  .message {
+    padding: 8px 10px 8px 46px;
+  }
+
+  .avatar {
+    top: 8px;
+    left: 8px;
+    width: 28px;
+    height: 28px;
+  }
+}
+
 .message.leaving {
-  animation: exit 550ms ease-in-out forwards;
+  animation: exit 300ms ease-in-out forwards;
 }
 
 @keyframes enter {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -165,7 +213,7 @@ html, body {
   }
   to {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-4px);
   }
 }
 
@@ -178,6 +226,7 @@ html, body {
       opacity: 1;
     }
   }
+
   @keyframes exit {
     from {
       opacity: 1;

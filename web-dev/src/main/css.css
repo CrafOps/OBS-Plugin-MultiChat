@@ -1,0 +1,36 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter Variable', 'Noto Sans Thai Variable', 'Segoe UI', Tahoma, sans-serif;
+  --color-void: #09070e;
+  --color-lilac: #b7a0ff;
+}
+
+/* Styling lives in Tailwind utilities. These are browser-wide defaults only. */
+@layer base {
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+  }
+  body {
+    margin: 0;
+    background: var(--color-void);
+    color: #f5f3ff;
+  }
+  button,
+  a,
+  input,
+  select,
+  summary {
+    outline-offset: 5px;
+  }
+  ::selection {
+    background: #7644cc;
+    color: white;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}

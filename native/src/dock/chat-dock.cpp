@@ -416,6 +416,28 @@ ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
     settingsLayout->addWidget(overlayGroup);
     overlayForm->addRow("Visible messages", overlayLimit);
     overlayForm->addRow("Fade after (seconds)", overlaySeconds);
+    overlayCustomCss = new QPlainTextEdit;
+    overlayCustomCss->setObjectName("overlayCustomCss");
+    overlayCustomCss->setPlaceholderText(
+        ".message {\n"
+        "  background: #17131f;\n"
+        "  border-radius: 18px;\n"
+        "}\n\n"
+        ".display-name {\n"
+        "  color: #d6b8ff;\n"
+        "}"
+    );
+    overlayCustomCss->setTabChangesFocus(false);
+    overlayCustomCss->setMinimumHeight(150);
+    overlayCustomCss->setMaximumBlockCount(250);
+    overlayForm->addRow("Custom CSS", overlayCustomCss);
+    auto *cssHint = new QLabel(
+        "Style the local Browser Source overlay. Leave empty to use the default theme. "
+        "CSS applies after saving and refreshes the overlay automatically. (0 / 6000 characters)"
+    );
+    cssHint->setWordWrap(true);
+    cssHint->setObjectName("muted");
+    overlayForm->addRow(cssHint);
     overlayUrl = new QLineEdit;
     overlayUrl->setReadOnly(true);
     overlayForm->addRow("Local overlay URL", overlayUrl);
@@ -449,6 +471,19 @@ ChatDock::ChatDock(QWidget *parent) : QWidget(parent), bridge(this)
     connect(credentialToggle, &QPushButton::toggled, credentials, &QWidget::setVisible);
     auto *save = new QPushButton("Save settings");
     auto *start = new QPushButton("Start bridge");
+    auto updateCssStatus = [this, cssHint, save] {
+        const int characters = overlayCustomCss->toPlainText().size();
+        const bool valid = characters <= 6000;
+        cssHint->setText(valid
+            ? QString("Style the local Browser Source overlay. Leave empty to use the default theme. "
+                      "CSS applies after saving and refreshes the overlay automatically. (%1 / 6000 characters)")
+                  .arg(characters)
+            : QString("Custom CSS is too long. Remove %1 characters to save (limit: 6000).")
+                  .arg(characters - 6000));
+        save->setEnabled(valid);
+    };
+    connect(overlayCustomCss, &QPlainTextEdit::textChanged, this, updateCssStatus);
+    updateCssStatus();
     save->setObjectName("primary");
     auto *settingsActions = new QHBoxLayout;
     settingsActions->addWidget(save, 1);
@@ -559,6 +594,7 @@ void ChatDock::saveSettings()
     settings.insert("fontSize", fontSize->value());
     settings.insert("overlayLimit", overlayLimit->value());
     settings.insert("overlaySeconds", overlaySeconds->value());
+    settings.insert("overlayCustomCss", overlayCustomCss->toPlainText());
     settings.insert("sharingAutoStart", sharingAutoStart->isChecked());
     settings.insert("alerts", QJsonObject{
         {"enabled", alertsEnabled->isChecked()}, {"gifts", giftAlerts->isChecked()},
@@ -598,6 +634,7 @@ void ChatDock::receive(const QJsonObject &message)
         fontSize->setValue(settings.value("fontSize").toInt(13));
         overlayLimit->setValue(settings.value("overlayLimit").toInt(8));
         overlaySeconds->setValue(settings.value("overlaySeconds").toInt(25));
+        overlayCustomCss->setPlainText(settings.value("overlayCustomCss").toString());
         sharingAutoStart->setChecked(settings.value("sharingAutoStart").toBool());
         const auto alerts = settings.value("alerts").toObject();
         alertsEnabled->setChecked(alerts.value("enabled").toBool(true));

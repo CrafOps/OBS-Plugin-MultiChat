@@ -25,6 +25,7 @@ both the website and relay on the requested hostname.
 2. ติดตั้ง dependency ตาม lockfile และตรวจแพ็กเกจ:
 
    ```powershell
+   npm.cmd ci --prefix ../web-dev
    npm.cmd ci
    npm.cmd run types
    npm.cmd run check
@@ -49,14 +50,14 @@ both the website and relay on the requested hostname.
 5. `wrangler.jsonc` ตั้ง Custom Domain เป็น `docks.54621325.xyz` และสร้าง
    binding/migration ของ Durable Objects ให้แล้ว ตรวจผลใน Workers & Pages
 6. เปิด `https://docks.54621325.xyz/health` ต้องตอบ status `ok`
-7. เปิด `https://docks.54621325.xyz/viewer` จะเห็นหน้าแชทที่ขอลิงก์ส่วนตัว
+7. เปิด `https://docks.54621325.xyz/viewer` จะเห็นหน้าแชทตัวอย่าง ลิงก์จริงสร้างจาก Settings ใน OBS
 
 หากมีหลายบัญชี ให้ระบุ account_id ที่ถูกต้องใน wrangler.jsonc ก่อน deploy
 อย่าเผยแพร่ API token หรือคีย์ห้องไว้ในซอร์ส เว็บไม่มีคีย์ของผู้ใช้ฝังมาด้วย
 บริการใช้ quota ของบัญชี Cloudflare; เริ่มตรวจการใช้งานก่อนเปิดให้คนจำนวนมาก
 
-**ยังไม่เชื่อมปุ่มแชร์เข้า OBS ในขั้นนี้** จึงไม่มีลิงก์ผู้ใช้จริงจาก Dock จนกว่า
-จะทำขั้นถัดไป หน้าเปล่าที่ขอลิงก์ส่วนตัวหลัง deploy เป็นพฤติกรรมที่ถูกต้อง
+หน้าแรกเป็นเว็บโปรโมทโปรเจกต์ มีคู่มือที่ `/docs/installation` และดาวน์โหลดที่
+`/releases` ผู้ใช้เปิดแชร์จาก Settings ใน OBS แล้วใช้ลิงก์ `/viewer#...` ได้
 
 ### หลักการคีย์และสิทธิ์
 
@@ -73,6 +74,7 @@ both the website and relay on the requested hostname.
 Keep the ZIP folder structure. From `hosting/`, use Node 22+ and run:
 
 ```sh
+npm ci --prefix ../web-dev
 npm ci
 npm run types
 npm run check
